@@ -16,7 +16,7 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true, // elimina propiedades extra que no estén en el DTO
       forbidNonWhitelisted: true, // devuelve error si se envían campos no permitidos
-      transform: true, // transforma payloads a los tipos definidos en los DTOs
+      transform: true, // transforma payloads a los tipos definidos en cada DTOs
     }),
   );
 
