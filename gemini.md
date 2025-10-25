@@ -4,33 +4,32 @@
 
 Este proyecto consiste en la reescritura y modernización de una aplicación heredada de Node.js y Sequelize. La nueva implementación utilizará **NestJS** y **TypeORM**, aplicando principios de **Domain-Driven Design (DDD)** para lograr una arquitectura modular, escalable y mantenible.
 
-El objetivo es migrar la lógica de negocio y la estructura de la base de datos existentes, eliminando redundancias y mejorando la calidad general del código.
+El objetivo es migrar la lógica de negocio y la estructura de la base de datos existentes, eliminando redundancias y mejorando la calidad general del código. El proyecto ya ha comenzado y cuenta con una estructura modular bien definida.
 
-## 2. Principios Arquitectónicos Fundamentales
+## 2. Estado Actual y Avances
 
-El desarrollo debe adherirse estrictamente a los siguientes principios:
+El desarrollo ha progresado significativamente, estableciendo una base sólida que sigue los principios arquitectónicos definidos.
 
-- **Diseño Orientado al Dominio (DDD)**:
-    - Cada módulo de NestJS (`@Module()`) debe representar un **Contexto Delimitado (Bounded Context)**.
-    - Las entidades de dominio se definirán dentro de su módulo correspondiente. Solo los servicios deben ser exportados para mantener la encapsulación.
-    - Las asociaciones entre dominios deben ser **unidireccionales** y estar explícitamente controladas.
+- **Estructura Modular**: La aplicación está organizada en módulos que representan contextos delimitados (Bounded Contexts) de DDD. Los módulos principales implementados son:
+    - **Users**: Gestión de usuarios.
+    - **Stores-module**: Un módulo agrupador que contiene:
+        - **Stores**: Gestión de tiendas.
+        - **UserStores**: Gestión de la relación entre usuarios y tiendas.
+    - **Files**: Gestión de archivos.
 
-- **Desacoplamiento entre Dominio y Persistencia**:
-    - El modelo de dominio debe consistir en clases simples (POJOs/POCOs), desacopladas de la capa de persistencia.
-    - La capa de infraestructura (usando TypeORM) será la única responsable de mapear estas entidades de dominio al esquema de la base de datos.
+- **Funcionalidades Implementadas**:
+    - Creación y gestión de usuarios.
+    - Creación y gestión de tiendas.
+    - Vinculación de usuarios a tiendas.
 
-- **Uso de DTOs (Data Transfer Objects)**:
-    - **Nunca exponer las entidades del ORM** directamente a través de la API.
-    - Utilizar DTOs para toda la comunicación entre capas (controladores, servicios) y para las cargas útiles de la API.
-    - Aplicar `class-validator` y `class-transformer` en los DTOs para la validación y transformación de datos.
+- **Principios Arquitectónicos Aplicados**:
+    - **Diseño Orientado al Dominio (DDD)**: Cada módulo (`Users`, `Stores`, `UserStores`) funciona como un contexto delimitado, con sus propias entidades, DTOs, servicios y controladores.
+    - **Desacoplamiento y DTOs**: Se utilizan DTOs para la comunicación entre capas, evitando exponer las entidades de TypeORM directamente en la API.
+    - **Manejo de Excepciones e Interceptores**: Se han implementado interceptores y filtros de excepciones globales para estandarizar las respuestas y el manejo de errores.
 
-- **Estrategia de Acceso a Datos**:
-    - Utilizar los repositorios de TypeORM para operaciones que involucren lógica de negocio compleja.
-    - Para consultas simples, reportes o `joins` complejos, preferir el uso de `QueryBuilder` o SQL directo para evitar la sobrecarga del ORM.
+## 3. Próximos Pasos
 
-## 3. Tarea Principal: Implementación de Dominios
-
-La tarea principal es **diseñar e implementar los dominios principales** de la aplicación. Esto incluye la creación de módulos, entidades de TypeORM, DTOs, servicios y controladores, basándose en las relaciones y la estructura del sistema heredado.
+La tarea principal es continuar implementando los dominios restantes de la aplicación, basándose en las relaciones y la estructura del sistema heredado. Esto incluye la creación de nuevos módulos, entidades, DTOs, servicios y controladores.
 
 ## 4. Contexto del Sistema Heredado (Fuente de Verdad)
 
