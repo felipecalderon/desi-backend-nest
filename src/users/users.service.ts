@@ -29,15 +29,21 @@ export class UsersService {
     return this.userRepo.find();
   }
 
-  async findOne(email: string): Promise<User> {
+  async findOneByEmail(email: string): Promise<User> {
     const user = await this.userRepo.findOne({ where: { email } });
     if (!user)
       throw new NotFoundException(`User with email ${email} not found`);
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<User> {
+  async findOneById(id: string): Promise<User> {
     const user = await this.userRepo.findOne({ where: { userID: id } });
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+    return user;
+  }
+
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
+    const user = await this.findOneById(id);
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
 
     if (dto.password) {
@@ -50,7 +56,7 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<void> {
-    const user = await this.userRepo.findOne({ where: { userID: id } });
+    const user = await this.findOneById(id);
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);
     await this.userRepo.remove(user);
   }

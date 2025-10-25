@@ -34,8 +34,10 @@ export class ResponseInterceptor<T>
     return next.handle().pipe(
       map((data: T | IResponse<T>) => {
         // Detectar si ya es un IResponse
-        if ('statusCode' in (data as IResponse<T>)) {
-          return data as IResponse<T>;
+        if (typeof data === 'object') {
+          if ('statusCode' in (data as IResponse<T>)) {
+            return data as IResponse<T>;
+          }
         }
 
         return {

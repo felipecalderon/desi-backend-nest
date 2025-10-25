@@ -1,9 +1,11 @@
+import { UserStore } from '../../stores-module/userstores/entities/userstore.entity';
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 
 export enum UserRole {
@@ -35,6 +37,9 @@ export class User {
 
   @Column({ type: 'varchar', length: 255 })
   password: string;
+
+  @OneToMany(() => UserStore, (userStore) => userStore.user)
+  userStores: UserStore[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'createdAt' })
   createdAt: Date;

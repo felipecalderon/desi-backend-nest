@@ -57,7 +57,7 @@ export class UsersController {
   @ApiResponse({ status: 200, description: 'Usuario encontrado.', type: User })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
   findOne(@Param('email') email: string) {
-    return this.usersService.findOne(email);
+    return this.usersService.findOneByEmail(email);
   }
 
   @Patch(':id')

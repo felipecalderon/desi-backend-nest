@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { User } from 'src/users/entities/user.entity';
 
 @Module({
   imports: [
@@ -13,7 +12,7 @@ import { User } from 'src/users/entities/user.entity';
       username: process.env.PGUSER,
       password: process.env.PGPASSWORD,
       database: process.env.PGDATABASE,
-      entities: [User],
+      entities: [__dirname + '/../**/*.entity{.ts,.js}'],
       synchronize: true, // desactivar en producción
     }),
   ],
