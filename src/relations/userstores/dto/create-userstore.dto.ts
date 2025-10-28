@@ -9,4 +9,3 @@ export class CreateUserstoreDto {
   @IsUUID()
   storeID: string;
 }
-

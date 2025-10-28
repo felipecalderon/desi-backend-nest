@@ -42,6 +42,19 @@ export class UsersService {
     return user;
   }
 
+  async findStoresByUserId(id: string): Promise<any> {
+    const user = await this.userRepo.findOne({
+      where: { userID: id },
+      relations: ['userStores', 'userStores.store'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    return user.userStores.map((userStore) => userStore.store);
+  }
+
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     const user = await this.findOneById(id);
     if (!user) throw new NotFoundException(`User with ID ${id} not found`);

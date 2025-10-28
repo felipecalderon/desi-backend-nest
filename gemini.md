@@ -8,22 +8,23 @@ El objetivo es migrar la lógica de negocio y la estructura de la base de datos 
 
 ## 2. Estado Actual y Avances
 
-El desarrollo ha progresado significativamente, estableciendo una base sólida que sigue los principios arquitectónicos definidos.
+El desarrollo ha progresado significativamente, estableciendo una base sólida que sigue los principios arquitectónicos definidos. La estructura del proyecto ha sido refactorizada para mejorar la separación de conceptos y la escalabilidad.
 
-- **Estructura Modular**: La aplicación está organizada en módulos que representan contextos delimitados (Bounded Contexts) de DDD. Los módulos principales implementados son:
+- **Estructura Modular (Arquitectura Refactorizada)**: La aplicación se organiza en módulos que representan contextos delimitados (Bounded Contexts) de DDD. Los dominios de negocio principales están completamente desacoplados, y un nuevo módulo `relations` gestiona las interconexiones:
     - **Users**: Gestión de usuarios.
-    - **Stores-module**: Un módulo agrupador que contiene:
-        - **Stores**: Gestión de tiendas.
-        - **UserStores**: Gestión de la relación entre usuarios y tiendas.
+    - **Stores**: Gestión de tiendas.
     - **Files**: Gestión de archivos.
+    - **Relations**: Un módulo agrupador que contiene la lógica de las entidades de unión (join entities). Su primer submódulo es:
+        - **UserStores**: Gestiona la relación de muchos a muchos entre usuarios y tiendas.
 
 - **Funcionalidades Implementadas**:
     - Creación y gestión de usuarios.
     - Creación y gestión de tiendas.
     - Vinculación de usuarios a tiendas.
+    - Endpoints optimizados para consultar las tiendas de un usuario (`/users/:id/stores`) y los usuarios de una tienda (`/stores/:id/users`).
 
 - **Principios Arquitectónicos Aplicados**:
-    - **Diseño Orientado al Dominio (DDD)**: Cada módulo (`Users`, `Stores`, `UserStores`) funciona como un contexto delimitado, con sus propias entidades, DTOs, servicios y controladores.
+    - **Diseño Orientado al Dominio (DDD)**: Cada módulo de dominio (`Users`, `Stores`) es autónomo. El módulo `Relations` actúa como un contexto delimitado para las asociaciones, evitando el acoplamiento entre los dominios principales.
     - **Desacoplamiento y DTOs**: Se utilizan DTOs para la comunicación entre capas, evitando exponer las entidades de TypeORM directamente en la API.
     - **Manejo de Excepciones e Interceptores**: Se han implementado interceptores y filtros de excepciones globales para estandarizar las respuestas y el manejo de errores.
 

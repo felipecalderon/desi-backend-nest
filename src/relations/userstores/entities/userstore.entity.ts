@@ -7,7 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../../users/entities/user.entity';
-import { Store } from '../../stores/entities/store.entity';
+import { Store } from '../../../stores/entities/store.entity';
 
 @Entity({ name: 'UserStore', schema: 'public' })
 export class UserStore {

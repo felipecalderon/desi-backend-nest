@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { UserStore } from '../../userstores/entities/userstore.entity';
+import { UserStore } from '../../relations/userstores/entities/userstore.entity';
 
 export enum StoreType {
   CENTRAL = 'central',

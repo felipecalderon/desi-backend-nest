@@ -13,8 +13,9 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { User } from './entities/user.entity';
+import { Store } from 'src/stores/entities/store.entity';
 import { CustomMessage } from 'src/common/decorators/response-message';
+import { User } from './entities/user.entity';
 
 @ApiTags('Usuarios')
 @Controller('users')
@@ -45,6 +46,23 @@ export class UsersController {
   })
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get(':id/stores')
+  @ApiOperation({ summary: 'Obtener todas las tiendas de un usuario' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del usuario',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de tiendas del usuario.',
+    type: [Store],
+  })
+  @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  findStoresByUserId(@Param('id') id: string) {
+    return this.usersService.findStoresByUserId(id);
   }
 
   @Get(':email')

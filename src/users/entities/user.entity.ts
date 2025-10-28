@@ -1,4 +1,4 @@
-import { UserStore } from '../../stores-module/userstores/entities/userstore.entity';
+import { UserStore } from '../../relations/userstores/entities/userstore.entity';
 import {
   Entity,
   Column,

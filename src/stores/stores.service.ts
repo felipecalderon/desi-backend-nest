@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
+import { UserStore } from 'src/relations/userstores/entities/userstore.entity';
 
 @Injectable()
 export class StoresService {
@@ -25,6 +26,19 @@ export class StoresService {
     const store = await this.storeRepo.findOne({ where: { storeID: id } });
     if (!store) throw new NotFoundException(`Store with ID ${id} not found`);
     return store;
+  }
+
+  async findUsersByStoreId(id: string): Promise<any> {
+    const store = await this.storeRepo.findOne({
+      where: { storeID: id },
+      relations: ['userStores', 'userStores.user'],
+    });
+
+    if (!store) {
+      throw new NotFoundException(`Tienda con ID ${id} no encontrada`);
+    }
+
+    return store.userStores.map((userStore: UserStore) => userStore.user);
   }
 
   async update(id: string, dto: UpdateStoreDto): Promise<Store> {
