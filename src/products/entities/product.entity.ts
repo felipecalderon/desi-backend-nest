@@ -9,7 +9,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { ProductVariation } from './product-variation.entity';
-import { Category } from 'src/categories/entities/category.entity';
+import { Category } from '../../categories/entities/category.entity';
 
 export enum ProductGenre {
   HOMBRE = 'Hombre',

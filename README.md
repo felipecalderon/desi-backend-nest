@@ -1,98 +1,278 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 🏪 D3SI ERP - Sistema de Gestión Empresarial
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Sistema ERP moderno desarrollado con NestJS para la gestión integral de tiendas, inventarios, ventas y usuarios. Diseñado para manejar operaciones de tiendas centrales, franquicias y puntos de venta con control completo de stock y precios.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🚀 Características Principales
 
-## Description
+### 📦 Gestión de Productos
+- **Productos con Variaciones**: SKU único, precios de costo y lista, stock centralizado
+- **Categorías Jerárquicas**: Soporte para categorías y subcategorías anidadas
+- **Control de Inventario**: Seguimiento en tiempo real del stock disponible
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### 🏢 Gestión de Tiendas
+- **Múltiples Tipos**: Central, Franquicia, Consignación, Terceros
+- **Inventario por Tienda**: Cada tienda mantiene su propio stock con precios personalizados
+- **Transferencias de Stock**: Movimientos internos gratuitos entre tiendas
+- **Ventas Inter-tiendas**: Sistema de ventas de central a franquicias con precios variables
 
-## Project setup
+### 💰 Sistema de Ventas
+- **Ventas Transaccionales**: Registro completo de ventas con múltiples productos
+- **Estados de Venta**: Pendiente, Pagado, Anulado
+- **Métodos de Pago**: Efectivo, Débito, Crédito
+- **Trazabilidad**: Historial completo de todas las transacciones
 
+### 👥 Gestión de Usuarios
+- **Asignación a Tiendas**: Usuarios pueden tener acceso a múltiples tiendas
+- **Control de Acceso**: Gestión de permisos por tienda
+
+## 🛠️ Stack Tecnológico
+
+- **Framework**: [NestJS](https://nestjs.com/) v11
+- **Runtime**: Node.js con TypeScript
+- **Base de Datos**: PostgreSQL
+- **ORM**: TypeORM con sincronización automática
+- **Servidor HTTP**: Fastify (alto rendimiento)
+- **Documentación**: Swagger/OpenAPI
+- **Validación**: class-validator & class-transformer
+
+## 📋 Requisitos Previos
+
+- Node.js >= 18.x
+- PostgreSQL >= 14.x
+- pnpm (recomendado) o npm
+
+## ⚙️ Instalación
+
+1. **Clonar el repositorio**
 ```bash
-$ pnpm install
+git clone https://github.com/felipecalderon/desi-backend-nest
+cd desi-backend-nest
 ```
 
-## Compile and run the project
-
+2. **Instalar dependencias**
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm install
 ```
 
-## Run tests
+3. **Configurar variables de entorno**
 
-```bash
-# unit tests
-$ pnpm run test
+Crear archivo `.env` en la raíz del proyecto:
 
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+```env
+# Database
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=tu_password
+PGDATABASE=nombre_bd
 ```
 
-## Deployment
+4. **Iniciar la base de datos**
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Asegúrate de que PostgreSQL esté corriendo y la base de datos creada:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+```sql
+CREATE DATABASE nombre_bd;
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+5. **Ejecutar la aplicación**
 
-## Resources
+```bash
+# Desarrollo con hot-reload
+pnpm start:dev
 
-Check out a few resources that may come in handy when working with NestJS:
+# Producción
+pnpm build
+pnpm start:prod
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 📚 Documentación API
 
-## Support
+Una vez iniciada la aplicación, accede a la documentación interactiva de Swagger:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```
+http://localhost:3001/docs
+```
 
-## Stay in touch
+## 🗂️ Estructura del Proyecto
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```
+src/
+├── categories/          # Gestión de categorías de productos
+├── common/             # DTOs y utilidades compartidas
+├── datasource/         # Configuración de base de datos
+├── products/           # Gestión de productos y variaciones
+├── relations/          
+│   ├── store-stock/    # Inventario por tienda (StoreProduct)
+│   └── userstores/     # Relación usuarios-tiendas
+├── sales/              # Sistema de ventas
+├── stores/             # Gestión de tiendas
+└── users/              # Gestión de usuarios
+```
 
-## License
+## 🔄 Flujo de Operaciones
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+### 1. Crear Producto en Central
+```http
+POST /products
+{
+  "name": "Camisa Polo",
+  "description": "Camisa de algodón",
+  "categoryID": "uuid",
+  "variations": [
+    {
+      "sku": "CAM-ROJ-L-001",
+      "priceCost": 15000,
+      "priceList": 25000,
+      "stock": 100,
+      "color": "Rojo",
+      "size": "L"
+    }
+  ]
+}
+```
+
+### 2. Transferir Stock a Franquicia (Gratuito)
+```http
+POST /store-stock/transfer
+{
+  "targetStoreID": "uuid-franquicia",
+  "items": [
+    {
+      "variationID": "uuid-variacion",
+      "quantity": 10,
+      "purchaseCost": 15000
+    }
+  ]
+}
+```
+
+### 3. Vender de Central a Franquicia
+```http
+POST /sales
+{
+  "storeID": "uuid-franquicia",
+  "paymentType": "Credito",
+  "items": [
+    {
+      "variationID": "uuid-variacion",
+      "quantity": 10,
+      "unitPrice": 18000
+    }
+  ]
+}
+```
+
+### 4. Actualizar Precio de Venta en Franquicia
+```http
+PATCH /store-stock/{storeProductID}/price
+{
+  "salePrice": 30000
+}
+```
+
+## 🎯 Endpoints Principales
+
+### Productos
+- `GET /products` - Listar productos (con paginación)
+- `POST /products` - Crear producto
+- `GET /products/:id` - Obtener producto
+- `PATCH /products/:id` - Actualizar producto
+- `DELETE /products/:id` - Eliminar producto
+
+### Tiendas
+- `GET /stores` - Listar tiendas
+- `POST /stores` - Crear tienda
+- `GET /stores/:id/users` - Usuarios de una tienda
+
+### Ventas
+- `POST /sales` - Crear venta
+- `GET /sales` - Listar ventas
+- `GET /sales/:id` - Detalle de venta
+- `PATCH /sales/:id/status` - Cambiar estado
+
+### Stock de Tiendas
+- `POST /store-stock/transfer` - Transferir stock
+- `GET /store-stock/inventory?storeID=uuid` - Ver inventario
+- `PATCH /store-stock/:id/price` - Actualizar precio
+
+## 🔐 Seguridad
+
+- Validación de datos con `class-validator`
+- Transacciones atómicas para operaciones críticas
+- Bloqueo pesimista en actualizaciones de stock
+- Validación de stock antes de transferencias/ventas
+
+## 🧪 Testing
+
+```bash
+# Unit tests
+pnpm test
+
+# E2E tests
+pnpm test:e2e
+
+# Test coverage
+pnpm test:cov
+```
+
+## 📊 Base de Datos
+
+El sistema utiliza TypeORM con sincronización automática. Las entidades principales son:
+
+- **Product** & **ProductVariation**: Productos y sus variaciones
+- **Store**: Tiendas del sistema
+- **StoreProduct**: Inventario específico por tienda
+- **Sale** & **SaleProduct**: Ventas y sus detalles
+- **User** & **UserStore**: Usuarios y sus asignaciones
+- **Category**: Categorías jerárquicas
+
+### ⚠️ Resetear Base de Datos (Solo Desarrollo)
+
+Para empezar con una base de datos limpia, descomenta la línea en `src/datasource/database.module.ts`:
+
+```typescript
+dropSchema: true, // ⚠️ ELIMINA TODAS LAS TABLAS
+```
+
+**IMPORTANTE**: Vuelve a comentar esta línea después del primer inicio para no perder datos.
+
+## 🚀 Despliegue
+
+### Variables de Entorno en Producción
+
+```env
+NODE_ENV=production
+PGHOST=tu-host-produccion
+PGPORT=5432
+PGUSER=usuario_prod
+PGPASSWORD=password_seguro
+PGDATABASE=desi_erp_prod
+```
+
+### Build para Producción
+
+```bash
+pnpm build
+pnpm start:prod
+```
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT.
+
+## 👨‍💻 Autor
+
+Desarrollado con ❤️ para la gestión eficiente de tiendas y franquicias.
+
+---
+
+**Documentación API**: http://localhost:3000/docs
