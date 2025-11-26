@@ -7,7 +7,7 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleStatusDto } from './dto/update-sale-status.dto';
 import { ProductVariation } from '../products/entities/product-variation.entity';
 import { Store } from '../stores/entities/store.entity';
-import { StoreProduct } from '../relations/store-stock/entities/store-stock.entity';
+import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
 
 @Injectable()
 export class SalesService {

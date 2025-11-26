@@ -7,7 +7,7 @@ import { StoresModule } from './stores/stores.module';
 import { UserstoresModule } from './relations/userstores/userstores.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
-import { StoreStockModule } from './relations/store-stock/store-stock.module';
+import { StoreProductModule } from './relations/storeproduct/storeproduct.module';
 import { SalesModule } from './sales/sales.module';
 
 @Module({
@@ -18,7 +18,7 @@ import { SalesModule } from './sales/sales.module';
     UserstoresModule,
     ProductsModule,
     CategoriesModule,
-    StoreStockModule,
+    StoreProductModule,
     SalesModule,
   ],
   providers: [

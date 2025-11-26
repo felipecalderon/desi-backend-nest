@@ -6,7 +6,7 @@ import { Sale } from './entities/sale.entity';
 import { SaleProduct } from './entities/sale-product.entity';
 import { ProductVariation } from '../products/entities/product-variation.entity';
 import { Store } from '../stores/entities/store.entity';
-import { StoreProduct } from '../relations/store-stock/entities/store-stock.entity';
+import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
 
 @Module({
   imports: [

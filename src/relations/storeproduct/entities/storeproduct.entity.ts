@@ -37,6 +37,9 @@ export class StoreProduct {
   @Column('decimal', { precision: 10, scale: 2 })
   purchaseCost: number; // Precio al que la tienda compró este producto
 
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  salePrice?: number; // Precio de venta en la tienda
+
   @CreateDateColumn()
   createdAt: Date;
 

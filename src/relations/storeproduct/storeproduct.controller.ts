@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
-import { StoreStockService } from './store-stock.service';
+import { StoreProductService } from './storeproduct.service';
 import { TransferStockDto } from './dto/transfer-stock.dto';
-import { UpdateStorePriceDto } from './dto/update-store-price.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { StoreProduct } from './entities/storeproduct.entity';
 
-@ApiTags('Stock de Tiendas')
-@Controller('store-stock')
-export class StoreStockController {
-  constructor(private readonly storeStockService: StoreStockService) {}
+@ApiTags('Productos de la Tienda')
+@Controller('storeproduct')
+export class StoreProductController {
+  constructor(private readonly storeProductService: StoreProductService) {}
 
   @Post('transfer')
   @ApiOperation({
@@ -18,7 +18,7 @@ export class StoreStockController {
   @ApiResponse({ status: 400, description: 'Stock insuficiente o datos inválidos.' })
   @ApiResponse({ status: 404, description: 'Tienda o Producto no encontrado.' })
   transferStock(@Body() transferStockDto: TransferStockDto) {
-    return this.storeStockService.transferStock(transferStockDto);
+    return this.storeProductService.transferStock(transferStockDto);
   }
 
   @Get('inventory')
@@ -28,23 +28,21 @@ export class StoreStockController {
   })
   @ApiResponse({ status: 200, description: 'Inventario de la tienda.' })
   getStoreInventory(@Query('storeID', ParseUUIDPipe) storeID: string) {
-    return this.storeStockService.getStoreInventory(storeID);
+    return this.storeProductService.getStoreInventory(storeID);
   }
 
-  @Patch(':storeProductID/price')
+  @Patch('update')
   @ApiOperation({
-    summary: 'Actualizar precio de venta de un producto en tienda',
-    description: 'Permite a una tienda establecer su propio precio de venta al público para un producto específico de su inventario.',
+    summary: 'Actualizar un producto en tienda',
+    description: 'Permite a una tienda actualizar un producto específico de su inventario.',
   })
-  @ApiResponse({ status: 200, description: 'Precio actualizado exitosamente.' })
+  @ApiResponse({ status: 200, description: 'Producto actualizado exitosamente.' })
   @ApiResponse({ status: 404, description: 'Producto de tienda no encontrado.' })
-  updateSalePrice(
-    @Param('storeProductID', ParseUUIDPipe) storeProductID: string,
-    @Body() updateStorePriceDto: UpdateStorePriceDto,
+  updateStoreProduct(
+    @Body() storeProduct: StoreProduct,
   ) {
-    return this.storeStockService.updateSalePrice(
-      storeProductID,
-      updateStorePriceDto.salePrice,
+    return this.storeProductService.updateStoreProduct(
+      storeProduct,
     );
   }
 }

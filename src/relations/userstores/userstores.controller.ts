@@ -12,7 +12,7 @@ import { CreateUserstoreDto } from './dto/create-userstore.dto';
 import { UpdateUserstoreDto } from './dto/update-userstore.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Usuarios-Tiendas')
+@ApiTags('Usuarios de las Tiendas')
 @Controller('userstores')
 export class UserstoresController {
   constructor(private readonly userstoresService: UserstoresService) {}

@@ -1,13 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { StoreProduct } from './entities/store-stock.entity';
+import { StoreProduct } from './entities/storeproduct.entity';
 import { TransferStockDto } from './dto/transfer-stock.dto';
 import { ProductVariation } from '../../products/entities/product-variation.entity';
 import { Store } from '../../stores/entities/store.entity';
 
 @Injectable()
-export class StoreStockService {
+export class StoreProductService {
   constructor(
     @InjectRepository(StoreProduct)
     private readonly storeStockRepository: Repository<StoreProduct>,
@@ -78,20 +78,22 @@ export class StoreStockService {
     });
   }
 
-  async updateSalePrice(
-    storeProductID: string,
-    salePrice: number,
+  async updateStoreProduct(
+    storeProduct: StoreProduct,
   ): Promise<StoreProduct> {
-    const storeProduct = await this.storeStockRepository.findOne({
-      where: { storeProductID },
+    const storeProductDB = await this.storeStockRepository.findOne({
+      where: { storeProductID: storeProduct.storeProductID },
     });
 
-    if (!storeProduct) {
+    if (!storeProductDB) {
       throw new NotFoundException(
-        `Producto de tienda con ID ${storeProductID} no encontrado`,
+        `Producto de tienda con ID ${storeProduct.storeProductID} no encontrado`,
       );
     }
 
-    return this.storeStockRepository.save(storeProduct);
+    storeProductDB.purchaseCost = storeProduct.purchaseCost;
+    storeProductDB.salePrice = storeProduct.salePrice;
+    storeProductDB.quantity = storeProduct.quantity;
+    return this.storeStockRepository.save(storeProductDB);
   }
 }
