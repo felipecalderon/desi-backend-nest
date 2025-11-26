@@ -24,15 +24,15 @@ export class ProductVariation {
   @JoinColumn({ name: 'productID' })
   product: Product;
 
-  @Column({ type: 'varchar', length: 255 })
-  name: string; // Ej: "Rojo, Talla L"
-
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 255, unique: true })
   sku: string; // Stock Keeping Unit
 
   @Column('decimal', { precision: 10, scale: 2 })
-  price: number;
+  priceCost: number;
+
+  @Column('decimal', { precision: 10, scale: 2 })
+  priceList: number;
 
   @Column('int')
   stock: number;

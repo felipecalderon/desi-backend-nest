@@ -10,27 +10,63 @@ import {
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Categorías')
 @Controller('categories')
 export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
+  @ApiOperation({
+    summary: 'Crear una nueva categoría',
+    description: 'Crea una categoría de productos. Puede ser una categoría raíz o una subcategoría si se especifica parentID.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Categoría creada exitosamente.',
+  })
   create(@Body() createCategoryDto: CreateCategoryDto) {
     return this.categoriesService.create(createCategoryDto);
   }
 
   @Get()
+  @ApiOperation({
+    summary: 'Obtener todas las categorías raíz',
+    description: 'Retorna solo las categorías principales (sin padre) con sus subcategorías anidadas en la propiedad children.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de categorías raíz con sus hijos.',
+  })
   findAll() {
     return this.categoriesService.findAll();
   }
 
   @Get(':id')
+  @ApiOperation({
+    summary: 'Obtener una categoría por ID',
+    description: 'Retorna la información de una categoría específica incluyendo su padre y sus hijos.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Categoría encontrada.',
+  })
+  @ApiResponse({ status: 404, description: 'Categoría no encontrada.' })
   findOne(@Param('id') id: string) {
     return this.categoriesService.findOne(id);
   }
 
   @Patch(':id')
+  @ApiOperation({
+    summary: 'Actualizar una categoría',
+    description: 'Modifica el nombre o la categoría padre de una categoría existente.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Categoría actualizada exitosamente.',
+  })
+  @ApiResponse({ status: 404, description: 'Categoría no encontrada.' })
   update(
     @Param('id') id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
@@ -39,6 +75,15 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @ApiOperation({
+    summary: 'Eliminar una categoría',
+    description: 'Elimina una categoría del sistema. Si tiene subcategorías, estas también serán eliminadas.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Categoría eliminada exitosamente.',
+  })
+  @ApiResponse({ status: 404, description: 'Categoría no encontrada.' })
   remove(@Param('id') id: string) {
     return this.categoriesService.remove(id);
   }

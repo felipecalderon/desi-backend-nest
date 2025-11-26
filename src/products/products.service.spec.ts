@@ -82,7 +82,7 @@ describe('ProductsService', () => {
     it('should update a product and its variations', async () => {
       const updateDto: UpdateProductDto = {
         name: 'Updated Product',
-        variations: [{ size: 'L', price: 100, stock: 10, name: "Updated", sku: "123" }],
+        variations: [{ size: 'L', priceCost: 80, priceList: 100, stock: 10, sku: "123" }],
       };
       const existingProduct = { productID: '1', name: 'Old Product' };
       const updatedProduct = { ...existingProduct, ...updateDto };
