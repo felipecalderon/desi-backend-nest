@@ -66,6 +66,7 @@ export class UsersController {
   }
 
   @Get(':email')
+  @CustomMessage('Usuario encontrado exitosamente')
   @ApiOperation({ summary: 'Buscar un usuario por su email' })
   @ApiParam({
     name: 'email',
