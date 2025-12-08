@@ -9,6 +9,7 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { StoreProductModule } from './relations/storeproduct/storeproduct.module';
 import { SalesModule } from './sales/sales.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { SalesModule } from './sales/sales.module';
     CategoriesModule,
     StoreProductModule,
     SalesModule,
+    PurchaseOrdersModule,
   ],
   providers: [
     {
