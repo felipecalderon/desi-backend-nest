@@ -43,6 +43,51 @@ export class PurchaseOrdersService {
     return { subtotal, net, tax, total };
   }
 
+  // direction: +1 aplica stock (central -> tienda), -1 revierte
+  private async applyStockForOrder(
+    manager: EntityManager,
+    order: PurchaseOrder,
+    direction: 1 | -1,
+  ) {
+    const sign = direction === 1 ? 1 : -1;
+
+    for (const item of order.items) {
+      const quantity = item.quantityRequested || 0;
+      if (quantity <= 0) continue;
+
+      const variation = await manager.findOne(ProductVariation, {
+        where: { variationID: item.variationID },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!variation) {
+        throw new NotFoundException(
+          `Variación con ID ${item.variationID} no encontrada`,
+        );
+      }
+
+      if (sign === 1 && variation.stock < quantity) {
+        throw new BadRequestException(
+          `Stock insuficiente en central para SKU ${variation.sku}. Disponible: ${variation.stock}, Requerido: ${quantity}`,
+        );
+      }
+
+      // mover stock central
+      variation.stock -= sign * quantity;
+      await manager.save(variation);
+
+      // mover stock en tienda
+      const purchaseCost = Number(item.unitPrice ?? variation.priceCost);
+      await this.upsertStoreStock(
+        manager,
+        order.storeID,
+        item.variationID,
+        purchaseCost,
+        sign * quantity,
+      );
+    }
+  }
+
   private async upsertStoreStock(
     manager: EntityManager,
     storeID: string,
@@ -233,6 +278,7 @@ export class PurchaseOrdersService {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
         where: { purchaseOrderID: id },
+        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -242,7 +288,31 @@ export class PurchaseOrdersService {
         );
       }
 
-      purchaseOrder.paymentStatus = dto.status;
+      const previousStatus = purchaseOrder.paymentStatus;
+      const nextStatus = dto.status;
+
+      // si no cambia el estado, no se toca stock
+      if (previousStatus === nextStatus) {
+        return this.findOne(id);
+      }
+
+      // Pasar a Pagado desde Pendiente o Anulado -> aplicar stock
+      if (
+        nextStatus === 'Pagado' &&
+        (previousStatus === 'Pendiente' || previousStatus === 'Anulado')
+      ) {
+        await this.applyStockForOrder(manager, purchaseOrder, 1);
+      }
+
+      // Salir de Pagado hacia Pendiente o Anulado -> revertir stock
+      if (
+        previousStatus === 'Pagado' &&
+        (nextStatus === 'Pendiente' || nextStatus === 'Anulado')
+      ) {
+        await this.applyStockForOrder(manager, purchaseOrder, -1);
+      }
+
+      purchaseOrder.paymentStatus = nextStatus;
       await manager.save(purchaseOrder);
       return this.findOne(id);
     });
@@ -281,20 +351,9 @@ export class PurchaseOrdersService {
       for (const scan of dto.items) {
         scannedVariations.add(scan.variationID);
 
-        const variation = await manager.findOne(ProductVariation, {
-          where: { variationID: scan.variationID },
-          lock: { mode: 'pessimistic_write' },
-        });
-        if (!variation) {
-          throw new NotFoundException(
-            `Variación con ID ${scan.variationID} no encontrada`,
-          );
-        }
-
         const existing = itemsMap.get(scan.variationID);
         const received = scan.quantityReceived;
-        const unitPrice =
-          scan.unitPrice ?? existing?.unitPrice ?? Number(variation.priceCost);
+        const unitPrice = scan.unitPrice ?? existing?.unitPrice ?? 0;
 
         if (existing) {
           const diff = received - existing.quantityRequested;
@@ -310,23 +369,6 @@ export class PurchaseOrdersService {
             );
           }
 
-          if (delta > 0) {
-            if (variation.stock < delta) {
-              throw new BadRequestException(
-                `Stock insuficiente en central para SKU ${variation.sku}. Disponible: ${variation.stock}, Solicitado: ${delta}`,
-              );
-            }
-            variation.stock -= delta;
-            await manager.save(variation);
-            await this.upsertStoreStock(
-              manager,
-              purchaseOrder.storeID,
-              variation.variationID,
-              unitPrice,
-              delta,
-            );
-          }
-
           existing.quantityReceived = received;
           if (received > existing.quantityRequested) {
             existing.quantityRequested = received;
@@ -338,21 +380,6 @@ export class PurchaseOrdersService {
           await manager.save(existing);
         } else {
           summary.noEsperados += received;
-
-          if (variation.stock < received) {
-            throw new BadRequestException(
-              `Stock insuficiente en central para SKU ${variation.sku}. Disponible: ${variation.stock}, Solicitado: ${received}`,
-            );
-          }
-          variation.stock -= received;
-          await manager.save(variation);
-          await this.upsertStoreStock(
-            manager,
-            purchaseOrder.storeID,
-            variation.variationID,
-            unitPrice,
-            received,
-          );
 
           const newItem = manager.create(PurchaseOrderItem, {
             purchaseOrderID: purchaseOrder.purchaseOrderID,
