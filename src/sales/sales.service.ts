@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Sale } from './entities/sale.entity';
@@ -53,7 +57,9 @@ export class SalesService {
         });
 
         if (!variation) {
-          throw new NotFoundException(`Variación con ID ${variationID} no encontrada`);
+          throw new NotFoundException(
+            `Variación con ID ${variationID} no encontrada`,
+          );
         }
 
         if (variation.stock < quantity) {
@@ -128,7 +134,10 @@ export class SalesService {
     return sale;
   }
 
-  async updateStatus(id: string, updateSaleStatusDto: UpdateSaleStatusDto): Promise<Sale> {
+  async updateStatus(
+    id: string,
+    updateSaleStatusDto: UpdateSaleStatusDto,
+  ): Promise<Sale> {
     const sale = await this.findOne(id);
     sale.status = updateSaleStatusDto.status;
     await this.saleRepository.save(sale);

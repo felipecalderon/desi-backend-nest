@@ -18,7 +18,8 @@ export class CreateProductVariationDto {
   sku: string;
 
   @ApiProperty({
-    description: 'Precio de costo de la variación (lo que cuesta producir/comprar)',
+    description:
+      'Precio de costo de la variación (lo que cuesta producir/comprar)',
     example: 15000,
     minimum: 0,
   })

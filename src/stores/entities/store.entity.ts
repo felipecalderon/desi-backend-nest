@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { UserStore } from '../../relations/userstores/entities/userstore.entity';
+import { Expense } from '../../expenses/entities/expense.entity';
 
 export enum StoreType {
   CENTRAL = 'central',
@@ -72,6 +73,9 @@ export class Store {
 
   @OneToMany(() => UserStore, (userStore) => userStore.store)
   userStores: UserStore[];
+
+  @OneToMany(() => Expense, (expense) => expense.store)
+  expenses: Expense[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'createdAt' })
   createdAt: Date;

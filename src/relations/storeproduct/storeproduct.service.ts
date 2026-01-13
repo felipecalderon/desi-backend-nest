@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { StoreProduct } from './entities/storeproduct.entity';
@@ -23,7 +27,9 @@ export class StoreProductService {
         where: { storeID: targetStoreID },
       });
       if (!targetStore) {
-        throw new NotFoundException(`Tienda destino con ID ${targetStoreID} no encontrada`);
+        throw new NotFoundException(
+          `Tienda destino con ID ${targetStoreID} no encontrada`,
+        );
       }
 
       // 2. Procesar cada item
@@ -37,7 +43,9 @@ export class StoreProductService {
         });
 
         if (!variation) {
-          throw new NotFoundException(`Variación con ID ${variationID} no encontrada`);
+          throw new NotFoundException(
+            `Variación con ID ${variationID} no encontrada`,
+          );
         }
 
         if (variation.stock < quantity) {
@@ -78,9 +86,7 @@ export class StoreProductService {
     });
   }
 
-  async updateStoreProduct(
-    storeProduct: StoreProduct,
-  ): Promise<StoreProduct> {
+  async updateStoreProduct(storeProduct: StoreProduct): Promise<StoreProduct> {
     const storeProductDB = await this.storeStockRepository.findOne({
       where: { storeProductID: storeProduct.storeProductID },
     });

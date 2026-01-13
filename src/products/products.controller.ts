@@ -13,7 +13,7 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Product } from './entities/product.entity';
 
 @ApiTags('Productos')
@@ -45,6 +45,11 @@ export class ProductsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Buscar un producto por su ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID único del producto',
+    type: String,
+  })
   @ApiResponse({
     status: 200,
     description: 'Producto encontrado.',
@@ -57,6 +62,11 @@ export class ProductsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar un producto por su ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID de producto a actualizar',
+    type: String,
+  })
   @ApiResponse({
     status: 200,
     description: 'Producto actualizado exitosamente.',
@@ -71,6 +81,11 @@ export class ProductsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Eliminar un producto por su ID' })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del producto a eliminar',
+    type: String,
+  })
   @ApiResponse({
     status: 204,
     description: 'Producto eliminado exitosamente.',

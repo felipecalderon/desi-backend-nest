@@ -1,4 +1,12 @@
-import { IsArray, IsInt, IsNotEmpty, IsNumber, IsPositive, IsUUID, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsPositive,
+  IsUUID,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -21,7 +29,8 @@ class StockTransferItemDto {
   quantity: number;
 
   @ApiProperty({
-    description: 'Costo de compra por unidad (precio al que la tienda adquiere el producto)',
+    description:
+      'Costo de compra por unidad (precio al que la tienda adquiere el producto)',
     example: 12000,
     minimum: 0,
   })

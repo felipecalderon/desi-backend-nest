@@ -3,7 +3,8 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateStorePriceDto {
   @ApiProperty({
-    description: 'Nuevo precio de venta al público para este producto en la tienda',
+    description:
+      'Nuevo precio de venta al público para este producto en la tienda',
     example: 25000,
     minimum: 0,
   })
