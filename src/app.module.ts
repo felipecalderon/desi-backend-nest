@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { StoreProductModule } from './relations/storeproduct/storeproduct.module';
 import { SalesModule } from './sales/sales.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { ExpensesModule } from './expenses/expenses.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
     StoreProductModule,
     SalesModule,
     PurchaseOrdersModule,
+    ExpensesModule,
   ],
   providers: [
     {
