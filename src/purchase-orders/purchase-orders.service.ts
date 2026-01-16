@@ -66,23 +66,13 @@ export class PurchaseOrdersService {
         );
       }
 
-      if (sign === 1 && variation.stock < quantity) {
-        throw new BadRequestException(
-          `Stock insuficiente en central para SKU ${variation.sku}. Disponible: ${variation.stock}, Requerido: ${quantity}`,
-        );
-      }
-
-      // mover stock central
-      variation.stock -= sign * quantity;
-      await manager.save(variation);
-
       // mover stock en tienda
-      const purchaseCost = Number(item.unitPrice ?? variation.priceCost);
+      const priceCost = Number(item.unitPrice);
       await this.upsertStoreStock(
         manager,
         order.storeID,
         item.variationID,
-        purchaseCost,
+        priceCost,
         sign * quantity,
       );
     }
@@ -92,7 +82,7 @@ export class PurchaseOrdersService {
     manager: EntityManager,
     storeID: string,
     variationID: string,
-    purchaseCost: number,
+    priceCost: number,
     delta: number,
   ) {
     let storeStock = await manager.findOne(StoreProduct, {
@@ -104,13 +94,14 @@ export class PurchaseOrdersService {
       storeStock = manager.create(StoreProduct, {
         storeID,
         variationID,
-        quantity: 0,
-        purchaseCost,
+        stock: 0,
+        priceCost,
+        priceList: 0, // default
       });
     }
 
-    storeStock.purchaseCost = purchaseCost;
-    storeStock.quantity += delta;
+    storeStock.priceCost = priceCost;
+    storeStock.stock += delta;
     await manager.save(storeStock);
   }
 
