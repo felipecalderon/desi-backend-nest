@@ -11,6 +11,9 @@ import { StoreProductModule } from './relations/storeproduct/storeproduct.module
 import { SalesModule } from './sales/sales.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ExpensesModule } from './expenses/expenses.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { PricingModule } from './pricing/pricing.module';
+import { TransfersModule } from './transfers/transfers.module';
 
 @Module({
   imports: [
@@ -24,6 +27,9 @@ import { ExpensesModule } from './expenses/expenses.module';
     SalesModule,
     PurchaseOrdersModule,
     ExpensesModule,
+    InventoryModule,
+    PricingModule,
+    TransfersModule,
   ],
   providers: [
     {
