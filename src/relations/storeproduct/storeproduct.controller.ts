@@ -10,7 +10,14 @@ import {
 } from '@nestjs/common';
 import { StoreProductService } from './storeproduct.service';
 import { TransferStockDto } from './dto/transfer-stock.dto';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
+import { UpdateStoreProductDto } from './dto/update-store-product.dto';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { StoreProduct } from './entities/storeproduct.entity';
 
 @ApiTags('Productos de la Tienda')
@@ -57,22 +64,30 @@ export class StoreProductController {
     return this.storeProductService.getStoreInventory(storeID);
   }
 
-  @Patch('update')
+  @Patch(':id')
   @ApiOperation({
-    summary: 'Actualizar un producto en tienda',
+    summary: 'Actualizar un producto en tienda (Inventario/Precios)',
     description:
-      'Permite a una tienda actualizar un producto específico de su inventario.',
+      'Permite actualizar el stock, precio de costo y precio de venta de un producto en una tienda específica usando su StoreProductID.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID del StoreProduct a actualizar',
+    type: String,
   })
   @ApiResponse({
     status: 200,
-    description: 'Producto actualizado exitosamente.',
+    description: 'Producto de tienda actualizado exitosamente.',
     type: StoreProduct,
   })
   @ApiResponse({
     status: 404,
     description: 'Producto de tienda no encontrado.',
   })
-  updateStoreProduct(@Body() storeProduct: StoreProduct) {
-    return this.storeProductService.updateStoreProduct(storeProduct);
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateStoreProductDto: UpdateStoreProductDto,
+  ) {
+    return this.storeProductService.update(id, updateStoreProductDto);
   }
 }

@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { StoreProduct } from './entities/storeproduct.entity';
 import { TransferStockDto } from './dto/transfer-stock.dto';
+import { UpdateStoreProductDto } from './dto/update-store-product.dto';
 import { ProductVariation } from '../../products/entities/product-variation.entity';
 import { Store } from '../../stores/entities/store.entity';
 
@@ -34,12 +35,11 @@ export class StoreProductService {
 
       // 2. Procesar cada item
       for (const item of items) {
-        const { variationID, quantity, purchaseCost } = item;
+        const { variationID, stock, priceCost } = item;
 
-        // Bloquear y obtener variación (Central Stock)
+        // Validar que exista la variación (para asegurar integridad)
         const variation = await manager.findOne(ProductVariation, {
           where: { variationID },
-          lock: { mode: 'pessimistic_write' }, // Evitar condiciones de carrera
         });
 
         if (!variation) {
@@ -48,17 +48,41 @@ export class StoreProductService {
           );
         }
 
-        if (variation.stock < quantity) {
+        // --- LÓGICA DE TRANSFERENCIA ---
+        // 1. Descontar de la Tienda Central (Ahora usando StoreProduct)
+        const centralStore = await manager.findOne(Store, {
+          where: { isCentralStore: true },
+        });
+
+        if (centralStore) {
+          const centralStock = await manager.findOne(StoreProduct, {
+            where: { storeID: centralStore.storeID, variationID },
+            lock: { mode: 'pessimistic_write' },
+          });
+
+          if (!centralStock) {
+            throw new BadRequestException(
+              `No hay stock en central para la variación ${variationID}`,
+            );
+          }
+
+          if (centralStock.stock < stock) {
+            throw new BadRequestException(
+              `Stock insuficiente en central. Solicitado: ${stock}, Disponible: ${centralStock.stock}`,
+            );
+          }
+
+          centralStock.stock -= stock;
+          await manager.save(centralStock);
+        } else {
+          // Fallback si no hay central store definida? O error?
+          // Asumimos que siempre debe haber una central para sacar stock.
           throw new BadRequestException(
-            `Stock insuficiente en central para la variación de SKU: ${variation.sku}. Solicitado: ${quantity}, Disponible: ${variation.stock}`,
+            'No se encontró una tienda central para descontar stock.',
           );
         }
 
-        // Descontar de Central
-        variation.stock -= quantity;
-        await manager.save(variation);
-
-        // Agregar a Franquicia (StoreProduct)
+        // 2. Agregar a Franquicia (StoreProduct)
         let storeStock = await manager.findOne(StoreProduct, {
           where: { storeID: targetStoreID, variationID },
         });
@@ -67,12 +91,17 @@ export class StoreProductService {
           storeStock = manager.create(StoreProduct, {
             storeID: targetStoreID,
             variationID,
-            purchaseCost,
-            quantity: 0,
+            priceCost,
+            stock: 0,
+            priceList: 0, // Inicializar precio venta en 0 o nulo
           });
         }
 
-        storeStock.quantity += quantity;
+        storeStock.stock += stock;
+        // Actualizamos costo si es relevante (promedio ponderado o último precio?)
+        // Por simplicidad, actualizamos al último costo de transferencia.
+        storeStock.priceCost = priceCost;
+
         await manager.save(storeStock);
       }
     });
@@ -86,20 +115,31 @@ export class StoreProductService {
     });
   }
 
-  async updateStoreProduct(storeProduct: StoreProduct): Promise<StoreProduct> {
-    const storeProductDB = await this.storeStockRepository.findOne({
-      where: { storeProductID: storeProduct.storeProductID },
+  async update(
+    id: string,
+    updateStoreProductDto: UpdateStoreProductDto,
+  ): Promise<StoreProduct> {
+    const storeProduct = await this.storeStockRepository.findOne({
+      where: { storeProductID: id },
     });
 
-    if (!storeProductDB) {
+    if (!storeProduct) {
       throw new NotFoundException(
-        `Producto de tienda con ID ${storeProduct.storeProductID} no encontrado`,
+        `Producto de tienda con ID ${id} no encontrado`,
       );
     }
 
-    storeProductDB.purchaseCost = storeProduct.purchaseCost;
-    storeProductDB.salePrice = storeProduct.salePrice;
-    storeProductDB.quantity = storeProduct.quantity;
-    return this.storeStockRepository.save(storeProductDB);
+    // Actualizar campos permitidos
+    if (updateStoreProductDto.stock !== undefined) {
+      storeProduct.stock = updateStoreProductDto.stock;
+    }
+    if (updateStoreProductDto.priceCost !== undefined) {
+      storeProduct.priceCost = updateStoreProductDto.priceCost;
+    }
+    if (updateStoreProductDto.priceList !== undefined) {
+      storeProduct.priceList = updateStoreProductDto.priceList;
+    }
+
+    return this.storeStockRepository.save(storeProduct);
   }
 }

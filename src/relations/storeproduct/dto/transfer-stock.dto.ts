@@ -26,7 +26,7 @@ class StockTransferItemDto {
   })
   @IsInt()
   @IsPositive()
-  quantity: number;
+  stock: number;
 
   @ApiProperty({
     description:
@@ -36,7 +36,7 @@ class StockTransferItemDto {
   })
   @IsNumber()
   @IsPositive()
-  purchaseCost: number;
+  priceCost: number;
 }
 
 export class TransferStockDto {

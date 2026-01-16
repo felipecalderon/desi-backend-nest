@@ -31,14 +31,18 @@ export class StoreProduct {
   @JoinColumn({ name: 'variationID' })
   variation: ProductVariation;
 
+  /**
+   * @deprecated logic should use InventoryMovements as source of truth.
+   * This field is a CACHE / READ MODEL derived from movements.
+   */
   @Column('int', { default: 0 })
-  quantity: number;
+  stock: number;
 
   @Column('decimal', { precision: 10, scale: 2 })
-  purchaseCost: number; // Precio al que la tienda compró este producto
+  priceCost: number; // Precio al que la tienda compró este producto
 
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
-  salePrice?: number; // Precio de venta en la tienda
+  priceList?: number; // Precio de venta en la tienda
 
   @CreateDateColumn()
   createdAt: Date;
