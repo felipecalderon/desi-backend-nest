@@ -6,6 +6,8 @@ import { ProductVariation } from './entities/product-variation.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { Store } from '../stores/entities/store.entity';
+import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
 
 @Injectable()
 export class ProductsService {
@@ -25,36 +27,70 @@ export class ProductsService {
         const product = transactionalEntityManager.create(Product, productData);
         const savedProduct = await transactionalEntityManager.save(product);
 
-        const variationEntities = variations.map((variationDto) =>
-          transactionalEntityManager.create(ProductVariation, {
-            ...variationDto,
-            product: savedProduct,
-          }),
-        );
-        await transactionalEntityManager.save(variationEntities);
+        // Buscar tienda central para asociar stock inicial
+        const centralStore = await transactionalEntityManager.findOne(Store, {
+          where: { isCentralStore: true },
+        });
+
+        for (const variationDto of variations) {
+          const variation = transactionalEntityManager.create(
+            ProductVariation,
+            {
+              ...variationDto,
+              product: savedProduct,
+            },
+          );
+          const savedVariation =
+            await transactionalEntityManager.save(variation);
+
+          if (centralStore) {
+            const sp = transactionalEntityManager.create(StoreProduct, {
+              storeID: centralStore.storeID,
+              variationID: savedVariation.variationID,
+              stock: variationDto.stock,
+              priceCost: variationDto.priceCost,
+              priceList: variationDto.priceList,
+            });
+            await transactionalEntityManager.save(sp);
+          }
+        }
 
         return savedProduct;
       },
     );
   }
 
-  findAll(paginationDto: PaginationDto): Promise<Product[]> {
+  async findAll(paginationDto: PaginationDto): Promise<Product[]> {
     const { limit = 10, offset = 0 } = paginationDto;
-    return this.productRepository.find({
+    const products = await this.productRepository.find({
       take: limit,
       skip: offset,
-      relations: ['variations', 'category'],
+      relations: [
+        'variations',
+        'variations.storeProducts',
+        'variations.storeProducts.store',
+        'category',
+      ],
     });
+
+    return products;
   }
 
   async findOne(id: string): Promise<Product> {
     const product = await this.productRepository.findOne({
       where: { productID: id },
-      relations: ['variations', 'category'],
+      relations: [
+        'variations',
+        'variations.storeProducts',
+        'variations.storeProducts.store',
+        'category',
+      ],
     });
+
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
     }
+
     return product;
   }
 
@@ -79,28 +115,81 @@ export class ProductsService {
         const savedProduct = await transactionalEntityManager.save(product);
 
         if (variations) {
-          // Eliminar variaciones existentes si se proporcionan nuevas (estrategia simple de reemplazo)
-          // O implementar lógica de diffing más compleja si se requiere
-          // Aquí optaremos por eliminar las anteriores y crear las nuevas para simplificar
-          // PERO, si se quiere mantener IDs, habría que comparar.
-          // Dado el comentario "Nota: La lógica para actualizar...", haremos un enfoque robusto:
-          // Borrar las que no están, actualizar las que están, crear las nuevas.
-          // Por simplicidad y seguridad en este paso, reemplazaremos todas si se envía el array.
-
-          await transactionalEntityManager.delete(ProductVariation, {
-            product: { productID: id },
+          const centralStore = await transactionalEntityManager.findOne(Store, {
+            where: { isCentralStore: true },
           });
 
-          const newVariations = variations.map((v) =>
-            transactionalEntityManager.create(ProductVariation, {
-              ...v,
-              product: savedProduct,
-            }),
+          const existingVariationsMap = new Map(
+            product.variations.map((v) => [v.sku, v]),
           );
-          await transactionalEntityManager.save(newVariations);
+
+          for (const vDto of variations) {
+            let variation = existingVariationsMap.get(vDto.sku);
+
+            if (variation) {
+              transactionalEntityManager.merge(
+                ProductVariation,
+                variation,
+                vDto,
+              );
+              await transactionalEntityManager.save(variation);
+
+              existingVariationsMap.delete(vDto.sku);
+
+              if (centralStore) {
+                let sp = await transactionalEntityManager.findOne(
+                  StoreProduct,
+                  {
+                    where: {
+                      storeID: centralStore.storeID,
+                      variationID: variation.variationID,
+                    },
+                  },
+                );
+
+                if (sp) {
+                  sp.stock = vDto.stock;
+                  sp.priceCost = vDto.priceCost;
+                  sp.priceList = vDto.priceList;
+                  await transactionalEntityManager.save(sp);
+                } else {
+                  sp = transactionalEntityManager.create(StoreProduct, {
+                    storeID: centralStore.storeID,
+                    variationID: variation.variationID,
+                    stock: vDto.stock,
+                    priceCost: vDto.priceCost,
+                    priceList: vDto.priceList,
+                  });
+                  await transactionalEntityManager.save(sp);
+                }
+              }
+            } else {
+              variation = transactionalEntityManager.create(ProductVariation, {
+                ...vDto,
+                product: savedProduct,
+              });
+              const savedVariation =
+                await transactionalEntityManager.save(variation);
+
+              if (centralStore) {
+                const sp = transactionalEntityManager.create(StoreProduct, {
+                  storeID: centralStore.storeID,
+                  variationID: savedVariation.variationID,
+                  stock: vDto.stock,
+                  priceCost: vDto.priceCost,
+                  priceList: vDto.priceList,
+                });
+                await transactionalEntityManager.save(sp);
+              }
+            }
+          }
+
+          for (const [sku, variation] of existingVariationsMap) {
+            await transactionalEntityManager.remove(variation);
+          }
         }
 
-        return this.findOne(id); // Retornar el producto actualizado con relaciones
+        return this.findOne(id);
       },
     );
   }

@@ -7,8 +7,10 @@ import {
   Index,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
 import { Product } from './product.entity';
+import { StoreProduct } from '../../relations/storeproduct/entities/storeproduct.entity';
 
 @Entity({ name: 'ProductVariations' })
 export class ProductVariation {
@@ -24,18 +26,12 @@ export class ProductVariation {
   @JoinColumn({ name: 'productID' })
   product: Product;
 
+  @OneToMany(() => StoreProduct, (storeProduct) => storeProduct.variation)
+  storeProducts: StoreProduct[];
+
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 255, unique: true })
-  sku: string; // Stock Keeping Unit
-
-  @Column('decimal', { precision: 10, scale: 2 })
-  priceCost: number;
-
-  @Column('decimal', { precision: 10, scale: 2 })
-  priceList: number;
-
-  @Column('int')
-  stock: number;
+  sku: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   color?: string;

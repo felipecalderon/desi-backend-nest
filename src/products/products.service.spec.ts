@@ -3,6 +3,8 @@ import { ProductsService } from './products.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { ProductVariation } from './entities/product-variation.entity';
+import { Store } from '../stores/entities/store.entity';
+import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
 import { EntityManager, Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -33,6 +35,8 @@ describe('ProductsService', () => {
     findOne: jest.fn(),
     merge: jest.fn(),
     delete: jest.fn(),
+    find: jest.fn(),
+    remove: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -61,6 +65,10 @@ describe('ProductsService', () => {
     entityManager = module.get<EntityManager>(EntityManager);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -85,27 +93,67 @@ describe('ProductsService', () => {
       const updateDto: UpdateProductDto = {
         name: 'Updated Product',
         variations: [
-          { size: 'L', priceCost: 80, priceList: 100, stock: 10, sku: '123' },
+          {
+            size: 'L',
+            priceCost: 80,
+            priceList: 100,
+            stock: 10,
+            sku: '123',
+          },
         ],
       };
-      const existingProduct = { productID: '1', name: 'Old Product' };
+      const existingProduct = {
+        productID: '1',
+        name: 'Old Product',
+        variations: [
+          {
+            variationID: 'v1',
+            sku: '123',
+            stock: 5,
+            priceCost: 50,
+            priceList: 60,
+          },
+        ],
+      };
       const updatedProduct = { ...existingProduct, ...updateDto };
+      const centralStore = { storeID: 'central', isCentralStore: true };
 
       mockEntityManager.transaction.mockImplementation(async (cb) => {
         return cb(mockEntityManager as any);
       });
-      mockEntityManager.findOne.mockResolvedValue(existingProduct);
-      mockEntityManager.save.mockResolvedValue(updatedProduct);
-      // Mock findOne called at the end of update
+
+      // Mock findOne implementation to return correct entities
+      mockEntityManager.findOne.mockImplementation((entity, options) => {
+        if (entity === Product) return Promise.resolve(existingProduct);
+        if (entity === Store) return Promise.resolve(centralStore);
+        if (entity === StoreProduct) return Promise.resolve(null); // No existing StoreProduct
+        return Promise.resolve(null);
+      });
+
+      mockEntityManager.save.mockImplementation((entity) =>
+        Promise.resolve(entity),
+      );
+
+      // Mock findOne called at the end of update to return result
       jest.spyOn(service, 'findOne').mockResolvedValue(updatedProduct as any);
 
       const result = await service.update('1', updateDto);
 
-      expect(result).toEqual(updatedProduct);
       expect(mockEntityManager.transaction).toHaveBeenCalled();
-      expect(mockEntityManager.delete).toHaveBeenCalledWith(ProductVariation, {
-        product: { productID: '1' },
-      });
+
+      // Verify Store logic
+      expect(mockEntityManager.findOne).toHaveBeenCalledWith(
+        Store,
+        expect.anything(),
+      );
+      // Should create StoreProduct
+      expect(mockEntityManager.create).toHaveBeenCalledWith(
+        StoreProduct,
+        expect.objectContaining({
+          storeID: 'central',
+          stock: 10,
+        }),
+      );
     });
 
     it('should throw NotFoundException if product not found', async () => {
