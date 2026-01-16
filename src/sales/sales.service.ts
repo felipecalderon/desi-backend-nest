@@ -35,7 +35,6 @@ export class SalesService {
         throw new NotFoundException(`Tienda con ID ${storeID} no encontrada`);
       }
 
-      // 2. Crear la venta (inicialmente en Pendiente)
       const sale = manager.create(Sale, {
         storeID,
         paymentType,
@@ -46,33 +45,10 @@ export class SalesService {
 
       let total = 0;
 
-      // 3. Procesar cada item
       for (const item of items) {
         const { variationID, quantity, unitPrice } = item;
-
-        // Bloquear y obtener variación (Central Stock)
-        const variation = await manager.findOne(ProductVariation, {
-          where: { variationID },
-          lock: { mode: 'pessimistic_write' },
-        });
-
-        if (!variation) {
-          throw new NotFoundException(
-            `Variación con ID ${variationID} no encontrada`,
-          );
-        }
-
-        if (variation.stock < quantity) {
-          throw new BadRequestException(
-            `Stock insuficiente en central para SKU: ${variation.sku}. Solicitado: ${quantity}, Disponible: ${variation.stock}`,
-          );
-        }
-
-        // Calcular subtotal
-        const subtotal = unitPrice * quantity;
+        let subtotal = unitPrice * quantity;
         total += subtotal;
-
-        // Crear SaleProduct
         const saleProduct = manager.create(SaleProduct, {
           saleID: savedSale.saleID,
           variationID,
@@ -82,36 +58,30 @@ export class SalesService {
         });
         await manager.save(saleProduct);
 
-        // Descontar de Central
-        variation.stock -= quantity;
-        await manager.save(variation);
-
-        // Agregar a StoreProduct de la tienda
-        let storeStock = await manager.findOne(StoreProduct, {
+        const storeStock = await manager.findOne(StoreProduct, {
           where: { storeID, variationID },
+          lock: { mode: 'pessimistic_write' },
         });
 
         if (!storeStock) {
-          storeStock = manager.create(StoreProduct, {
-            storeID,
-            variationID,
-            quantity: 0,
-            purchaseCost: unitPrice,
-          });
-        } else {
-          // Actualizar precio promedio ponderado (opcional, por ahora solo actualizamos)
-          storeStock.purchaseCost = unitPrice;
+          throw new BadRequestException(
+            `El producto no está asociado a la tienda (VariationID: ${variationID})`,
+          );
         }
 
-        storeStock.quantity += quantity;
+        if (storeStock.stock < quantity) {
+          throw new BadRequestException(
+            `Stock insuficiente en tienda para VariationID: ${variationID}. Solicitado: ${quantity}, Disponible: ${storeStock.stock}`,
+          );
+        }
+
+        storeStock.stock -= quantity;
         await manager.save(storeStock);
       }
 
-      // 4. Actualizar total de la venta
       savedSale.total = total;
       await manager.save(savedSale);
 
-      // 5. Retornar venta con relaciones
       return this.findOne(savedSale.saleID);
     });
   }

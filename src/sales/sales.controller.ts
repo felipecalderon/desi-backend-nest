@@ -20,9 +20,9 @@ export class SalesController {
 
   @Post()
   @ApiOperation({
-    summary: 'Crear una venta de la tienda central a otra tienda',
+    summary: 'Registrar una venta',
     description:
-      'Registra una venta de productos desde la central hacia una tienda (franquicia, consignación, etc.). Descuenta el stock de la central y lo agrega al inventario de la tienda destino.',
+      'Registra una nueva venta para una tienda específica. Si la tienda es Central, se descuenta del stock global de variaciones. Si es una tienda asociada (franquicia, etc.), se descuenta del stock local de la tienda (StoreProduct).',
   })
   @ApiResponse({
     status: 201,

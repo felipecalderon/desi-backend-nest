@@ -117,7 +117,7 @@ describe('SalesService', () => {
   });
 
   describe('create', () => {
-    it('should create a sale within a transaction', async () => {
+    it('should create a sale from Central Store and deduct from ProductVariation', async () => {
       const mockManager = {
         findOne: jest.fn(),
         create: jest.fn(),
@@ -125,24 +125,27 @@ describe('SalesService', () => {
       };
 
       mockDataSource.transaction.mockImplementation(async (cb) => {
+        // Mock targetStore (Central)
         mockManager.findOne
-          .mockResolvedValueOnce({ storeID: 'store-uuid-1' }) // Store
+          .mockResolvedValueOnce({
+            storeID: 'store-central',
+            isCentralStore: true,
+          })
+          // Mock ProductVariation
           .mockResolvedValueOnce({
             variationID: 'var-1',
             stock: 100,
             sku: 'SKU-1',
-          }) // Variation
-          .mockResolvedValueOnce(null); // StoreProduct
+          });
 
         mockManager.create
           .mockReturnValueOnce({
             saleID: 'new-sale',
-            storeID: 'store-uuid-1',
+            storeID: 'store-central',
             status: 'Pendiente',
             total: 0,
           })
-          .mockReturnValueOnce({ saleProductID: 'sp-1' })
-          .mockReturnValueOnce({ storeProductID: 'storeproduct-1' });
+          .mockReturnValueOnce({ saleProductID: 'sp-1' }); // SaleProduct
 
         mockManager.save.mockResolvedValue({ saleID: 'new-sale' });
 
@@ -151,13 +154,65 @@ describe('SalesService', () => {
 
       jest.spyOn(service, 'findOne').mockResolvedValue(mockSale as Sale);
 
-      const result = await service.create({
-        storeID: 'store-uuid-1',
+      await service.create({
+        storeID: 'store-central',
         paymentType: 'Efectivo',
         items: [{ variationID: 'var-1', quantity: 5, unitPrice: 200 }],
       });
 
       expect(mockDataSource.transaction).toHaveBeenCalled();
+      // Verificamos que se buscó la variation (deducción central)
+      // La primera llamada a findOne es Store, la segunda es Variation
+      expect(mockManager.findOne).toHaveBeenCalledTimes(2);
+    });
+
+    it('should create a sale from Associated Store and deduct from StoreProduct', async () => {
+      const mockManager = {
+        findOne: jest.fn(),
+        create: jest.fn(),
+        save: jest.fn(),
+      };
+
+      mockDataSource.transaction.mockImplementation(async (cb) => {
+        // Mock targetStore (Non-Central)
+        mockManager.findOne
+          .mockResolvedValueOnce({
+            storeID: 'store-assoc',
+            isCentralStore: false,
+          })
+          // Mock StoreProduct
+          .mockResolvedValueOnce({
+            storeID: 'store-assoc',
+            variationID: 'var-1',
+            quantity: 50,
+          });
+
+        mockManager.create
+          .mockReturnValueOnce({
+            saleID: 'new-sale-2',
+            storeID: 'store-assoc',
+            status: 'Pendiente',
+            total: 0,
+          })
+          .mockReturnValueOnce({ saleProductID: 'sp-2' }); // SaleProduct
+
+        mockManager.save.mockResolvedValue({ saleID: 'new-sale-2' });
+
+        return cb(mockManager);
+      });
+
+      jest.spyOn(service, 'findOne').mockResolvedValue(mockSale as Sale);
+
+      await service.create({
+        storeID: 'store-assoc',
+        paymentType: 'Credito',
+        items: [{ variationID: 'var-1', quantity: 10, unitPrice: 300 }],
+      });
+
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      // Verificamos que se buscó StoreProduct (deducción tienda)
+      // Primera llamada Store, segunda llamada StoreProduct
+      expect(mockManager.findOne).toHaveBeenCalledTimes(2);
     });
   });
 });
