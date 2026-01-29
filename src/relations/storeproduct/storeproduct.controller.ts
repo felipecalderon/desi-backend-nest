@@ -19,6 +19,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { StoreProduct } from './entities/storeproduct.entity';
+import { Product } from '../../products/entities/product.entity';
 
 @ApiTags('Productos de la Tienda')
 @Controller('storeproduct')
@@ -58,7 +59,7 @@ export class StoreProductController {
   @ApiResponse({
     status: 200,
     description: 'Inventario de la tienda.',
-    type: [StoreProduct],
+    type: [Product],
   })
   getStoreInventory(@Query('storeID', ParseUUIDPipe) storeID: string) {
     return this.storeProductService.getStoreInventory(storeID);

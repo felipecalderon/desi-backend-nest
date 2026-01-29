@@ -8,6 +8,10 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Store } from '../stores/entities/store.entity';
 import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
+import {
+  DiscountType,
+  SpecialOffer,
+} from '../pricing/entities/special-offer.entity';
 
 @Injectable()
 export class ProductsService {
@@ -62,16 +66,70 @@ export class ProductsService {
 
   async findAll(paginationDto: PaginationDto): Promise<Product[]> {
     const { limit = 10, offset = 0 } = paginationDto;
-    const products = await this.productRepository.find({
-      take: limit,
-      skip: offset,
-      relations: [
-        'variations',
-        'variations.storeProducts',
-        'variations.storeProducts.store',
-        'category',
-      ],
-    });
+
+    const products = await this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.variations', 'variations')
+      .leftJoinAndSelect('variations.storeProducts', 'storeProducts')
+      .leftJoinAndSelect('storeProducts.store', 'store')
+      .leftJoinAndSelect(
+        'storeProducts.specialOffers',
+        'offer',
+        '(offer.isActive = :isActive AND (offer.endDate IS NULL OR offer.endDate >= :now) AND offer.startDate <= :now)',
+        { isActive: true, now: new Date() },
+      )
+      .take(limit)
+      .skip(offset)
+      .getMany();
+
+    // Calculate final prices
+    for (const product of products) {
+      if (!product.variations) continue;
+      for (const variation of product.variations) {
+        if (!variation.storeProducts) continue;
+        for (const sp of variation.storeProducts) {
+          // Logic similar to PricingService.calculateFinalPrice
+          const offers = sp['specialOffers'] || []; // TypeORM relation
+          // Sort offers by startDate DESC to get latest
+          const activeOffer = offers.sort(
+            (a, b) => b.startDate.getTime() - a.startDate.getTime(),
+          )[0];
+
+          let finalPrice = Number(sp.priceList) || 0;
+          let discountApplied = false;
+          let discountDetails = null;
+
+          if (activeOffer) {
+            const originalPrice = finalPrice;
+            switch (activeOffer.discountType) {
+              case DiscountType.PERCENTAGE:
+                finalPrice = originalPrice * (1 - activeOffer.value / 100);
+                break;
+              case DiscountType.FIXED_AMOUNT:
+                finalPrice = Math.max(0, originalPrice - activeOffer.value);
+                break;
+              case DiscountType.FIXED_PRICE:
+                finalPrice = Number(activeOffer.value);
+                break;
+            }
+            finalPrice = Math.round(finalPrice * 100) / 100;
+            discountApplied = true;
+            discountDetails = {
+              offerID: activeOffer.offerID,
+              description: activeOffer.description,
+              type: activeOffer.discountType,
+              value: activeOffer.value,
+            };
+          }
+
+          // Attach to StoreProduct object
+          (sp as any).finalPrice = finalPrice;
+          (sp as any).discountApplied = discountApplied;
+          (sp as any).activeOffer = discountDetails;
+        }
+      }
+    }
 
     return products;
   }

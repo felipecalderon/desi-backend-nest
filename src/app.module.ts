@@ -14,6 +14,7 @@ import { ExpensesModule } from './expenses/expenses.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { PricingModule } from './pricing/pricing.module';
 import { TransfersModule } from './transfers/transfers.module';
+import { SeedModule } from './seed/seed.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { TransfersModule } from './transfers/transfers.module';
     InventoryModule,
     PricingModule,
     TransfersModule,
+    SeedModule,
   ],
   providers: [
     {

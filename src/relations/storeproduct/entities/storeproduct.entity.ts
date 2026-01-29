@@ -7,9 +7,11 @@ import {
   UpdateDateColumn,
   CreateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Store } from '../../../stores/entities/store.entity';
 import { ProductVariation } from '../../../products/entities/product-variation.entity';
+import { SpecialOffer } from '../../../pricing/entities/special-offer.entity';
 
 @Entity({ name: 'StoreProduct' })
 @Index(['variationID', 'storeID'], { unique: true })
@@ -46,6 +48,9 @@ export class StoreProduct {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @OneToMany(() => SpecialOffer, (offer) => offer.storeProduct)
+  specialOffers: SpecialOffer[];
 
   @UpdateDateColumn()
   updatedAt: Date;
