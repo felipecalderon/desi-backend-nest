@@ -29,13 +29,16 @@ export class PricingService {
 
     return this.dataSource.transaction(async (manager) => {
       let storeProduct = await manager.findOne(StoreProduct, {
-        where: { storeID, variationID },
+        where: {
+          store: { storeID },
+          variation: { variationID },
+        },
       });
 
       if (!storeProduct) {
         storeProduct = manager.create(StoreProduct, {
-          storeID,
-          variationID,
+          store: { storeID },
+          variation: { variationID },
           stock: 0,
           priceCost: 0,
           priceList: 0,
@@ -72,8 +75,8 @@ export class PricingService {
     return this.priceHistoryRepository.find({
       where: {
         storeProduct: {
-          storeID,
-          variationID,
+          store: { storeID },
+          variation: { variationID },
         },
       },
       order: { effectiveDate: 'DESC' },
@@ -114,7 +117,7 @@ export class PricingService {
     // Base Query: Same store product and active
     const query = this.specialOfferRepository
       .createQueryBuilder('offer')
-      .where('offer.storeProductID = :storeProductID', { storeProductID })
+      .where('offer.storeProduct = :storeProductID', { storeProductID })
       .andWhere('offer.isActive = :isActive', { isActive: true });
 
     // Overlap Logic:
@@ -166,14 +169,14 @@ export class PricingService {
       where: [
         // Case 1: endDate is defined
         {
-          storeProductID,
+          storeProduct: { storeProductID },
           isActive: true,
           startDate: LessThanOrEqual(now),
           endDate: MoreThanOrEqual(now),
         },
         // Case 2: endDate is null (indefinite)
         {
-          storeProductID,
+          storeProduct: { storeProductID },
           isActive: true,
           startDate: LessThanOrEqual(now),
           endDate: IsNull(),
@@ -202,7 +205,7 @@ export class PricingService {
       throw new NotFoundException('Producto de tienda no encontrado');
     }
 
-    const originalPrice = Number(storeProduct.priceList) || 0;
+    const originalPrice = storeProduct.priceList || 0;
 
     // 2. Get Active Offer
     const activeOffer = await this.getActiveOffer(storeProductID);

@@ -10,14 +10,12 @@ import {
 } from 'typeorm';
 import { Store } from '../../stores/entities/store.entity';
 import { SaleProduct } from './sale-product.entity';
+import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 
 @Entity({ name: 'Sale' })
 export class Sale {
   @PrimaryGeneratedColumn('uuid')
   saleID: string;
-
-  @Column('uuid')
-  storeID: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
@@ -30,7 +28,11 @@ export class Sale {
   })
   status: 'Pagado' | 'Pendiente' | 'Anulado';
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   total: number;
 
   @Column({

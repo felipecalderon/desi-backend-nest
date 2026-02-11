@@ -33,7 +33,7 @@ export class PurchaseOrdersService {
 
   private calculateTotals(items: PurchaseOrderItem[], discount: number) {
     const subtotal = this.toMoney(
-      items.reduce((acc, item) => acc + Number(item.subtotal), 0),
+      items.reduce((acc, item) => acc + item.subtotal, 0),
     );
     const net = this.toMoney(Math.max(subtotal - discount, 0));
     const tax = this.toMoney(net * TAX_RATE);
@@ -55,22 +55,22 @@ export class PurchaseOrdersService {
       if (quantity <= 0) continue;
 
       const variation = await manager.findOne(ProductVariation, {
-        where: { variationID: item.variationID },
+        where: { variationID: item.variation.variationID },
         lock: { mode: 'pessimistic_write' },
       });
 
       if (!variation) {
         throw new NotFoundException(
-          `Variación con ID ${item.variationID} no encontrada`,
+          `Variación con ID ${item.variation.variationID} no encontrada`,
         );
       }
 
       // mover stock en tienda
-      const priceCost = Number(item.unitPrice);
+      const priceCost = item.unitPrice;
       await this.upsertStoreStock(
         manager,
-        order.storeID,
-        item.variationID,
+        order.store.storeID,
+        item.variation.variationID,
         priceCost,
         sign * quantity,
       );
@@ -85,14 +85,17 @@ export class PurchaseOrdersService {
     delta: number,
   ) {
     let storeStock = await manager.findOne(StoreProduct, {
-      where: { storeID, variationID },
+      where: {
+        store: { storeID },
+        variation: { variationID },
+      },
       lock: { mode: 'pessimistic_write' },
     });
 
     if (!storeStock) {
       storeStock = manager.create(StoreProduct, {
-        storeID,
-        variationID,
+        store: { storeID },
+        variation: { variationID },
         stock: 0,
         priceCost,
         priceList: 0, // default
@@ -121,7 +124,7 @@ export class PurchaseOrdersService {
 
       const folio = randomBytes(3).toString('hex');
       const purchaseOrder = manager.create(PurchaseOrder, {
-        storeID: dto.storeID,
+        store: { storeID: dto.storeID },
         folio,
         isThirdParty,
         issueDate: new Date(),
@@ -151,8 +154,8 @@ export class PurchaseOrdersService {
 
         const subtotal = this.toMoney(itemDto.unitPrice * itemDto.quantity);
         const purchaseOrderItem = manager.create(PurchaseOrderItem, {
-          purchaseOrderID: savedOrder.purchaseOrderID,
-          variationID: itemDto.variationID,
+          purchaseOrder: { purchaseOrderID: savedOrder.purchaseOrderID },
+          variation: { variationID: itemDto.variationID },
           unitPrice: itemDto.unitPrice,
           subtotal,
           quantityRequested: itemDto.quantity,
@@ -224,7 +227,7 @@ export class PurchaseOrdersService {
             `Tienda con ID ${dto.storeID} no encontrada`,
           );
         }
-        purchaseOrder.storeID = dto.storeID;
+        purchaseOrder.store = store;
       }
 
       if (dto.paymentStatus) {
@@ -327,7 +330,7 @@ export class PurchaseOrdersService {
 
       const itemsMap = new Map<string, PurchaseOrderItem>();
       for (const item of purchaseOrder.items) {
-        itemsMap.set(item.variationID, item);
+        itemsMap.set(item.variation.variationID, item);
       }
 
       const scannedVariations = new Set<string>();
@@ -386,7 +389,7 @@ export class PurchaseOrdersService {
 
       // Marcar faltantes de los no escaneados
       for (const item of itemsMap.values()) {
-        if (!scannedVariations.has(item.variationID)) {
+        if (!scannedVariations.has(item.variation.variationID)) {
           const missing = item.quantityRequested - (item.quantityReceived ?? 0);
           if (missing > 0) {
             summary.faltantes += missing;

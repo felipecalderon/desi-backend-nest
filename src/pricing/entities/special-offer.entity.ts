@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { StoreProduct } from '../../relations/storeproduct/entities/storeproduct.entity';
+import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 
 export enum DiscountType {
   PERCENTAGE = 'PERCENTAGE', // e.g., 20% off
@@ -19,9 +20,6 @@ export enum DiscountType {
 export class SpecialOffer {
   @PrimaryGeneratedColumn('uuid')
   offerID: string;
-
-  @Column({ type: 'uuid' })
-  storeProductID: string;
 
   @ManyToOne(() => StoreProduct, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeProductID' })
@@ -36,7 +34,11 @@ export class SpecialOffer {
   })
   discountType: DiscountType;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   value: number;
 
   @Column({ type: 'timestamp with time zone' })

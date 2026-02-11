@@ -7,19 +7,17 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { StoreProduct } from '../../relations/storeproduct/entities/storeproduct.entity';
+import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 
 export enum PriceType {
-  COST = 'COST',
-  LIST = 'LIST',
+  COST = 'cost',
+  LIST = 'list',
 }
 
 @Entity({ name: 'PriceHistory' })
 export class PriceHistory {
   @PrimaryGeneratedColumn('uuid')
   historyID: string;
-
-  @Column({ type: 'uuid' })
-  storeProductID: string;
 
   @ManyToOne(() => StoreProduct, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeProductID' })
@@ -31,10 +29,18 @@ export class PriceHistory {
   })
   priceType: PriceType;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   oldPrice: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   newPrice: number;
 
   @Column({ type: 'varchar', nullable: true })

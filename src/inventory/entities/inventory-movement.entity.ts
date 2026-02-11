@@ -27,23 +27,9 @@ export class InventoryMovement {
   @PrimaryGeneratedColumn('uuid')
   movementID: string;
 
-  @ApiProperty({
-    description: 'ID de la tienda vinculada al movimiento',
-    example: '660f9501-f30c-52e5-b827-557766551111',
-  })
-  @Column({ type: 'uuid' })
-  storeID: string;
-
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
   store: Store;
-
-  @ApiProperty({
-    description: 'ID de la variante del producto',
-    example: 'd8c7e96b-8d74-4b4e-9d8a-987654321012',
-  })
-  @Column({ type: 'uuid' })
-  variationID: string;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })

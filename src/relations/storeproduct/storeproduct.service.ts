@@ -64,7 +64,10 @@ export class StoreProductService {
 
         if (centralStore) {
           const centralStock = await manager.findOne(StoreProduct, {
-            where: { storeID: centralStore.storeID, variationID },
+            where: {
+              store: { storeID: centralStore.storeID },
+              variation: { variationID },
+            },
             lock: { mode: 'pessimistic_write' },
           });
 
@@ -92,13 +95,16 @@ export class StoreProductService {
 
         // 2. Agregar a Franquicia (StoreProduct)
         let storeStock = await manager.findOne(StoreProduct, {
-          where: { storeID: targetStoreID, variationID },
+          where: {
+            store: { storeID: targetStoreID },
+            variation: { variationID },
+          },
         });
 
         if (!storeStock) {
           storeStock = manager.create(StoreProduct, {
-            storeID: targetStoreID,
-            variationID,
+            store: { storeID: targetStoreID },
+            variation: { variationID },
             priceCost,
             stock: 0,
             priceList: 0, // Inicializar precio venta en 0 o nulo
@@ -148,7 +154,7 @@ export class StoreProductService {
             (a, b) => b.startDate.getTime() - a.startDate.getTime(),
           )[0];
 
-          let finalPrice = Number(sp.priceList) || 0;
+          let finalPrice = sp.priceList || 0;
           let discountApplied = false;
           let discountDetails = null;
 

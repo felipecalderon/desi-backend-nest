@@ -34,7 +34,11 @@ export class TransfersService {
         'Origin and Destination stores must be different',
       );
     }
-    const transfer = this.transfersRepository.create(createDto);
+    const transfer = this.transfersRepository.create({
+      originStore: { storeID: createDto.originStoreID },
+      destinationStore: { storeID: createDto.destinationStoreID },
+      status: TransferStatus.PENDING,
+    });
     return this.transfersRepository.save(transfer);
   }
 
@@ -53,8 +57,9 @@ export class TransfersService {
     }
 
     const item = this.transferItemsRepository.create({
-      transferID,
-      ...addItemDto,
+      transfer: { transferID },
+      variation: { variationID: addItemDto.variationID },
+      quantity: addItemDto.quantity,
     });
     return this.transferItemsRepository.save(item);
   }
@@ -63,7 +68,12 @@ export class TransfersService {
     return this.dataSource.transaction(async (manager) => {
       const transfer = await manager.findOne(StoreTransfer, {
         where: { transferID },
-        relations: ['items'],
+        relations: [
+          'items',
+          'originStore',
+          'destinationStore',
+          'items.variation',
+        ],
       });
 
       if (!transfer) throw new NotFoundException('Transfer not found');
@@ -76,16 +86,16 @@ export class TransfersService {
 
       for (const item of transfer.items) {
         await this.inventoryService.createMovement({
-          storeID: transfer.originStoreID,
-          variationID: item.variationID,
+          storeID: transfer.originStore.storeID,
+          variationID: item.variation.variationID,
           quantity: item.quantity,
           reason: InventoryMovementReason.TRANSFER_OUT,
           referenceID: transfer.transferID,
         });
 
         await this.inventoryService.createMovement({
-          storeID: transfer.destinationStoreID,
-          variationID: item.variationID,
+          storeID: transfer.destinationStore.storeID,
+          variationID: item.variation.variationID,
           quantity: item.quantity,
           reason: InventoryMovementReason.TRANSFER_IN,
           referenceID: transfer.transferID,

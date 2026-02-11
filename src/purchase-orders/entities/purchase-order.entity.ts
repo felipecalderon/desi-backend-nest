@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Store } from '../../stores/entities/store.entity';
 import { PurchaseOrderItem } from './purchase-order-item.entity';
+import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 
 export type PurchaseOrderStatus = 'Pagado' | 'Pendiente' | 'Anulado';
 
@@ -22,9 +23,6 @@ export class PurchaseOrder {
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 50, unique: true })
   folio: string;
-
-  @Column('uuid')
-  storeID: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
@@ -52,19 +50,44 @@ export class PurchaseOrder {
   @Column('int', { default: 0 })
   totalProducts: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   subtotal: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   discount: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   netTotal: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   tax: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0 })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   total: number;
 
   @OneToMany(() => PurchaseOrderItem, (item) => item.purchaseOrder, {

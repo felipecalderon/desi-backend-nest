@@ -29,23 +29,9 @@ export class StoreTransfer {
   @PrimaryGeneratedColumn('uuid')
   transferID: string;
 
-  @ApiProperty({
-    description: 'ID de la tienda de origen',
-    example: '660f9501-f30c-52e5-b827-557766551111',
-  })
-  @Column({ type: 'uuid' })
-  originStoreID: string;
-
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'originStoreID' })
   originStore: Store;
-
-  @ApiProperty({
-    description: 'ID de la tienda de destino',
-    example: '770a0612-a41d-63f6-c938-668877662222',
-  })
-  @Column({ type: 'uuid' })
-  destinationStoreID: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'destinationStoreID' })

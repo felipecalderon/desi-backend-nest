@@ -49,8 +49,8 @@ export class ProductsService {
 
           if (centralStore) {
             const sp = transactionalEntityManager.create(StoreProduct, {
-              storeID: centralStore.storeID,
-              variationID: savedVariation.variationID,
+              store: { storeID: centralStore.storeID },
+              variation: { variationID: savedVariation.variationID },
               stock: variationDto.stock,
               priceCost: variationDto.priceCost,
               priceList: variationDto.priceList,
@@ -96,7 +96,7 @@ export class ProductsService {
             (a, b) => b.startDate.getTime() - a.startDate.getTime(),
           )[0];
 
-          let finalPrice = Number(sp.priceList) || 0;
+          let finalPrice = sp.priceList || 0;
           let discountApplied = false;
           let discountDetails = null;
 
@@ -199,8 +199,8 @@ export class ProductsService {
                   StoreProduct,
                   {
                     where: {
-                      storeID: centralStore.storeID,
-                      variationID: variation.variationID,
+                      store: { storeID: centralStore.storeID },
+                      variation: { variationID: variation.variationID },
                     },
                   },
                 );
@@ -212,8 +212,8 @@ export class ProductsService {
                   await transactionalEntityManager.save(sp);
                 } else {
                   sp = transactionalEntityManager.create(StoreProduct, {
-                    storeID: centralStore.storeID,
-                    variationID: variation.variationID,
+                    store: { storeID: centralStore.storeID },
+                    variation: { variationID: variation.variationID },
                     stock: vDto.stock,
                     priceCost: vDto.priceCost,
                     priceList: vDto.priceList,
@@ -231,8 +231,8 @@ export class ProductsService {
 
               if (centralStore) {
                 const sp = transactionalEntityManager.create(StoreProduct, {
-                  storeID: centralStore.storeID,
-                  variationID: savedVariation.variationID,
+                  store: { storeID: centralStore.storeID },
+                  variation: { variationID: savedVariation.variationID },
                   stock: vDto.stock,
                   priceCost: vDto.priceCost,
                   priceList: vDto.priceList,

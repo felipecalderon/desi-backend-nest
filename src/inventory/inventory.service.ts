@@ -24,13 +24,16 @@ export class InventoryService {
 
     return this.dataSource.transaction(async (manager) => {
       let storeProduct = await manager.findOne(StoreProduct, {
-        where: { storeID, variationID },
+        where: {
+          store: { storeID },
+          variation: { variationID },
+        },
       });
 
       if (!storeProduct) {
         storeProduct = manager.create(StoreProduct, {
-          storeID,
-          variationID,
+          store: { storeID },
+          variation: { variationID },
           stock: 0,
           priceCost: 0,
           priceList: 0,
@@ -66,8 +69,11 @@ export class InventoryService {
       }
 
       const movement = manager.create(InventoryMovement, {
-        ...createInventoryMovementDto,
+        store: { storeID },
+        variation: { variationID },
+        reason,
         delta,
+        referenceID: createInventoryMovementDto.referenceID,
       });
       const savedMovement = await manager.save(movement);
 
@@ -81,7 +87,9 @@ export class InventoryService {
   async getStoreStock(storeID: string): Promise<StoreProduct[]> {
     // This reads from the CACHE (StoreProduct) for performance
     return this.dataSource.getRepository(StoreProduct).find({
-      where: { storeID },
+      where: {
+        store: { storeID },
+      },
       relations: ['variation', 'variation.product'],
     });
   }

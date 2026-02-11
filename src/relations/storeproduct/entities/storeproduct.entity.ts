@@ -12,22 +12,17 @@ import {
 import { Store } from '../../../stores/entities/store.entity';
 import { ProductVariation } from '../../../products/entities/product-variation.entity';
 import { SpecialOffer } from '../../../pricing/entities/special-offer.entity';
+import { ColumnNumericTransformer } from '../../../common/transformers/numeric.transformer';
 
 @Entity({ name: 'StoreProduct' })
-@Index(['variationID', 'storeID'], { unique: true })
+@Index(['variation', 'store'], { unique: true })
 export class StoreProduct {
   @PrimaryGeneratedColumn('uuid')
   storeProductID: string;
 
-  @Column({ type: 'uuid' })
-  storeID: string;
-
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
   store: Store;
-
-  @Column({ type: 'uuid' })
-  variationID: string;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })
@@ -40,10 +35,19 @@ export class StoreProduct {
   @Column('int', { default: 0 })
   stock: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   priceCost: number; // Precio al que la tienda compró este producto
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: new ColumnNumericTransformer(),
+  })
   priceList?: number; // Precio de venta en la tienda
 
   @CreateDateColumn()

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { ColumnNumericTransformer } from '../../common/transformers/numeric.transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { Store } from '../../stores/entities/store.entity';
 
@@ -43,7 +44,11 @@ export class Expense {
     description: 'Monto total del gasto',
     example: 250.75,
   })
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   amount: number;
 
   @ApiProperty({
@@ -60,13 +65,6 @@ export class Expense {
   @ManyToOne(() => Store, (store) => store.expenses)
   @JoinColumn({ name: 'storeID' })
   store: Store;
-
-  @ApiProperty({
-    description: 'ID de la tienda que generó el gasto',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @Column()
-  storeID: string;
 
   @ApiProperty({
     description: 'Fecha de creación del registro',

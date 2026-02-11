@@ -36,7 +36,7 @@ export class SalesService {
       }
 
       const sale = manager.create(Sale, {
-        storeID,
+        store: { storeID },
         paymentType,
         status: 'Pendiente',
         total: 0,
@@ -50,8 +50,8 @@ export class SalesService {
         let subtotal = unitPrice * quantity;
         total += subtotal;
         const saleProduct = manager.create(SaleProduct, {
-          saleID: savedSale.saleID,
-          variationID,
+          sale: { saleID: savedSale.saleID },
+          variation: { variationID },
           unitPrice,
           subtotal,
           quantitySold: quantity,
@@ -59,7 +59,10 @@ export class SalesService {
         await manager.save(saleProduct);
 
         const storeStock = await manager.findOne(StoreProduct, {
-          where: { storeID, variationID },
+          where: {
+            store: { storeID },
+            variation: { variationID },
+          },
           lock: { mode: 'pessimistic_write' },
         });
 

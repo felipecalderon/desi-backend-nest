@@ -18,7 +18,11 @@ export class ExpensesService {
 
   async create(createExpenseDto: CreateExpenseDto) {
     try {
-      const expense = this.expenseRepository.create(createExpenseDto);
+      const { storeID, ...expenseData } = createExpenseDto;
+      const expense = this.expenseRepository.create({
+        ...expenseData,
+        store: { storeID },
+      });
       return await this.expenseRepository.save(expense);
     } catch (error) {
       throw new BadRequestException(error.message);
