@@ -15,6 +15,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Product } from './entities/product.entity';
+import { Public } from 'src/auth/decorators/public.decorator';
 
 @ApiTags('Productos')
 @Controller('products')
@@ -32,6 +33,7 @@ export class ProductsController {
     return this.productsService.create(createProductDto);
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: 'Obtener todos los productos' })
   @ApiResponse({
