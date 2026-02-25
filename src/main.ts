@@ -15,6 +15,12 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter(),
   );
+  app.enableCors({
+    origin: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   const httpAdapter = app.get(HttpAdapterHost).httpAdapter;
   app.useGlobalInterceptors(new ResponseInterceptor(Reflector.prototype));
   app.useGlobalFilters(new AllExceptionsFilter(httpAdapter));
