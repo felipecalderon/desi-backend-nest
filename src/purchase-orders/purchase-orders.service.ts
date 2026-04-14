@@ -173,7 +173,19 @@ export class PurchaseOrdersService {
       );
 
       await manager.save(savedOrder);
-      return this.findOne(savedOrder.purchaseOrderID);
+
+      const result = await manager.findOne(PurchaseOrder, {
+        where: { purchaseOrderID: savedOrder.purchaseOrderID },
+        relations: ['store', 'items', 'items.variation'],
+      });
+
+      if (!result) {
+        throw new NotFoundException(
+          `Orden de compra con ID ${savedOrder.purchaseOrderID} no encontrada`,
+        );
+      }
+
+      return result;
     });
   }
 
