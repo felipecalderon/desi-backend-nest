@@ -23,7 +23,6 @@ export class PurchaseOrdersService {
   constructor(
     @InjectRepository(PurchaseOrder)
     private readonly purchaseOrderRepository: Repository<PurchaseOrder>,
-    @InjectRepository(PurchaseOrderItem)
     private readonly dataSource: DataSource,
   ) {}
 
