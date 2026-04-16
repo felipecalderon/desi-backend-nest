@@ -15,39 +15,39 @@ import { ColumnNumericTransformer } from '../../common/transformers/numeric.tran
 @Entity({ name: 'Sale' })
 export class Sale {
   @PrimaryGeneratedColumn('uuid')
-  saleID: string;
+  saleID!: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
-  store: Store;
+  store!: Store;
 
   @Column({
     type: 'enum',
     enum: ['Pagado', 'Pendiente', 'Anulado'],
     default: 'Pendiente',
   })
-  status: 'Pagado' | 'Pendiente' | 'Anulado';
+  status!: 'Pagado' | 'Pendiente' | 'Anulado';
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  total: number;
+  total!: number;
 
   @Column({
     type: 'enum',
     enum: ['Efectivo', 'Debito', 'Credito'],
     default: 'Efectivo',
   })
-  paymentType: 'Efectivo' | 'Debito' | 'Credito';
+  paymentType!: 'Efectivo' | 'Debito' | 'Credito';
 
   @OneToMany(() => SaleProduct, (sp) => sp.sale, { cascade: true })
-  saleProducts: SaleProduct[];
+  saleProducts!: SaleProduct[];
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

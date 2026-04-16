@@ -2,20 +2,19 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { StoreProduct } from './entities/storeproduct.entity';
 import { Product } from '../../products/entities/product.entity';
-import {
-  DiscountType,
-  SpecialOffer,
-} from '../../pricing/entities/special-offer.entity';
+import { DiscountType } from '../../pricing/entities/special-offer.entity';
 import { LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
 import { TransferStockDto } from './dto/transfer-stock.dto';
 import { UpdateStoreProductDto } from './dto/update-store-product.dto';
 import { ProductVariation } from '../../products/entities/product-variation.entity';
 import { Store } from '../../stores/entities/store.entity';
+import { PricingService } from '../../pricing/pricing.service';
 
 @Injectable()
 export class StoreProductService {
@@ -25,6 +24,7 @@ export class StoreProductService {
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
     private readonly dataSource: DataSource,
+    @Optional() private readonly pricingService?: PricingService,
   ) {}
 
   async transferStock(transferStockDto: TransferStockDto): Promise<void> {
@@ -44,6 +44,7 @@ export class StoreProductService {
       // 2. Procesar cada item
       for (const item of items) {
         const { variationID, stock, priceCost } = item;
+        let sourcePriceList = priceCost;
 
         // Validar que exista la variación (para asegurar integridad)
         const variation = await manager.findOne(ProductVariation, {
@@ -83,6 +84,7 @@ export class StoreProductService {
             );
           }
 
+          sourcePriceList = centralStock.priceList ?? priceCost;
           centralStock.stock -= stock;
           await manager.save(centralStock);
         } else {
@@ -107,7 +109,7 @@ export class StoreProductService {
             variation: { variationID },
             priceCost,
             stock: 0,
-            priceList: 0, // Inicializar precio venta en 0 o nulo
+            priceList: sourcePriceList,
           });
         }
 
@@ -115,6 +117,14 @@ export class StoreProductService {
         // Actualizamos costo si es relevante (promedio ponderado o último precio?)
         // Por simplicidad, actualizamos al último costo de transferencia.
         storeStock.priceCost = priceCost;
+        if (
+          (storeStock.priceList === undefined ||
+            storeStock.priceList === null ||
+            storeStock.priceList <= 0) &&
+          sourcePriceList > 0
+        ) {
+          storeStock.priceList = sourcePriceList;
+        }
 
         await manager.save(storeStock);
       }
@@ -145,50 +155,66 @@ export class StoreProductService {
     for (const product of products) {
       for (const variation of product.variations) {
         for (const sp of variation.storeProducts) {
-          // Logic similar to PricingService.calculateFinalPrice
-          // We assume we fetched active offers.
-          // Pick the best/latest offer if multiple (though SQL filter might return multiple)
-          // Sort offers by startDate DESC to get latest
-          const offers = sp['specialOffers'] || []; // TypeORM relation
-          const activeOffer = offers.sort(
-            (a, b) => b.startDate.getTime() - a.startDate.getTime(),
-          )[0];
-
-          let finalPrice = sp.priceList || 0;
-          let discountApplied = false;
-          let discountDetails = null;
-
-          if (activeOffer) {
-            const originalPrice = finalPrice;
-            switch (activeOffer.discountType) {
-              case DiscountType.PERCENTAGE:
-                finalPrice = originalPrice * (1 - activeOffer.value / 100);
-                break;
-              case DiscountType.FIXED_AMOUNT:
-                finalPrice = Math.max(0, originalPrice - activeOffer.value);
-                break;
-              case DiscountType.FIXED_PRICE:
-                finalPrice = Number(activeOffer.value);
-                break;
+          // Use centralized pricing service to compute final price
+          if (this.pricingService) {
+            try {
+              const result = await this.pricingService.calculatePrice({
+                storeProductID: sp.storeProductID,
+                quantity: 1,
+              });
+              (sp as any).finalPrice = result.finalPrice;
+              (sp as any).discountApplied = result.discountApplied;
+              (sp as any).activeOffer = result.discountDetails;
+              (sp as any).pricingBreakdown = result.breakdown;
+            } catch (e) {
+              // If pricing fails (e.g., margin violation), attach error info and continue so UI can show problem
+              (sp as any).pricingError = e.message || 'Error calculando precio';
             }
-            finalPrice = Math.round(finalPrice * 100) / 100;
-            discountApplied = true;
-            discountDetails = {
-              offerID: activeOffer.offerID,
-              description: activeOffer.description,
-              type: activeOffer.discountType,
-              value: activeOffer.value,
-            };
+          } else {
+            // Fallback to local simple calculation (pre-change behavior)
+            const offers = sp['specialOffers'] || []; // TypeORM relation
+            const activeOffer = offers.sort(
+              (a, b) =>
+                (b.startDate?.getTime?.() || 0) -
+                (a.startDate?.getTime?.() || 0),
+            )[0];
+
+            let finalPrice = sp.priceList || 0;
+            let discountApplied = false;
+            let discountDetails: {
+              offerID: string;
+              description: string | undefined;
+              type: DiscountType;
+              value: number;
+            } | null = null;
+
+            if (activeOffer) {
+              const originalPrice = finalPrice;
+              switch (activeOffer.discountType) {
+                case DiscountType.PERCENTAGE:
+                  finalPrice = originalPrice * (1 - activeOffer.value / 100);
+                  break;
+                case DiscountType.FIXED_AMOUNT:
+                  finalPrice = Math.max(0, originalPrice - activeOffer.value);
+                  break;
+                case DiscountType.FIXED_PRICE:
+                  finalPrice = Number(activeOffer.value);
+                  break;
+              }
+              finalPrice = Math.round(finalPrice * 100) / 100;
+              discountApplied = true;
+              discountDetails = {
+                offerID: activeOffer.offerID,
+                description: activeOffer.description,
+                type: activeOffer.discountType,
+                value: activeOffer.value,
+              };
+            }
+
+            (sp as any).finalPrice = finalPrice;
+            (sp as any).discountApplied = discountApplied;
+            (sp as any).activeOffer = discountDetails;
           }
-
-          // Attach to StoreProduct object (as non-entity properties for JSON response)
-          // We can cast to any to attach extra props.
-          (sp as any).finalPrice = finalPrice;
-          (sp as any).discountApplied = discountApplied;
-          (sp as any).activeOffer = discountDetails;
-
-          // Remove specialOffers list from response to keep it clean if desired?
-          // delete (sp as any).specialOffers;
         }
       }
     }

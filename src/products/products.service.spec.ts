@@ -21,6 +21,7 @@ describe('ProductsService', () => {
     save: jest.fn(),
     merge: jest.fn(),
     remove: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockVariationRepository = {
@@ -76,15 +77,25 @@ describe('ProductsService', () => {
   describe('findAll', () => {
     it('should return an array of products with pagination', async () => {
       const result: Product[] = [];
-      mockProductRepository.find.mockResolvedValue(result);
+
+      // Mock a query builder chain used by the service
+      const queryBuilderMock: any = {
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(result),
+      };
+      mockProductRepository.createQueryBuilder.mockReturnValue(
+        queryBuilderMock,
+      );
 
       const paginationDto = { limit: 10, offset: 0 };
-      expect(await service.findAll(paginationDto)).toBe(result);
-      expect(mockProductRepository.find).toHaveBeenCalledWith({
-        take: 10,
-        skip: 0,
-        relations: ['variations', 'category'],
-      });
+      const res = await service.findAll(paginationDto);
+      expect(res).toBe(result);
+      expect(mockProductRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'product',
+      );
+      expect(queryBuilderMock.getMany).toHaveBeenCalled();
     });
   });
 
@@ -150,7 +161,7 @@ describe('ProductsService', () => {
       expect(mockEntityManager.create).toHaveBeenCalledWith(
         StoreProduct,
         expect.objectContaining({
-          storeID: 'central',
+          store: { storeID: 'central' },
           stock: 10,
         }),
       );

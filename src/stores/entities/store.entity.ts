@@ -21,65 +21,65 @@ export class Store {
   @PrimaryGeneratedColumn('uuid', {
     name: 'storeID',
   })
-  storeID: string;
+  storeID!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  location: string;
+  location!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  rut: string;
+  rut!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  address: string;
+  address!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  phone: string;
+  phone!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  city: string;
+  city!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
     nullable: true,
   })
-  storeImg: string | null;
+  storeImg!: string | null;
 
   @Column({
     type: 'varchar',
     length: 255,
     unique: true,
   })
-  email: string;
+  email!: string;
 
   @Column({
     type: 'varchar',
     length: 255,
     unique: true,
   })
-  name: string;
+  name!: string;
 
   @Column({
     type: 'enum',
     enum: StoreType,
   })
-  type: StoreType;
+  type!: StoreType;
 
   @Column({
     type: 'boolean',
     default: false,
   })
-  isCentralStore: boolean;
+  isCentralStore!: boolean;
 
   @OneToMany(() => UserStore, (userStore) => userStore.store)
-  userStores: UserStore[];
+  userStores!: UserStore[];
 
   @OneToMany(() => Expense, (expense) => expense.store)
-  expenses: Expense[];
+  expenses!: Expense[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'createdAt' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn({ type: 'timestamp with time zone', name: 'updatedAt' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

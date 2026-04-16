@@ -14,7 +14,7 @@ import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { Expense } from './entities/expense.entity';
-import { CustomMessage } from 'src/common/decorators/response-message';
+import { CustomMessage } from '../common/decorators/response-message';
 
 @ApiTags('Gestión de Gastos')
 @Controller('expenses')

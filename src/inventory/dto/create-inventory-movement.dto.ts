@@ -16,7 +16,7 @@ export class CreateInventoryMovementDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  storeID: string;
+  storeID!: string;
 
   @ApiProperty({
     description: 'ID de la variante del producto',
@@ -24,7 +24,7 @@ export class CreateInventoryMovementDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  variationID: string;
+  variationID!: string;
 
   @ApiProperty({
     description:
@@ -52,7 +52,7 @@ export class CreateInventoryMovementDto {
   })
   @IsEnum(InventoryMovementReason)
   @IsNotEmpty()
-  reason: InventoryMovementReason;
+  reason!: InventoryMovementReason;
 
   @ApiProperty({
     description: 'ID de referencia opcional (ej. ID de venta o pedido)',

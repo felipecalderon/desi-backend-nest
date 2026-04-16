@@ -14,41 +14,41 @@ import { ColumnNumericTransformer } from '../../common/transformers/numeric.tran
 @Entity({ name: 'PurchaseOrderItem' })
 export class PurchaseOrderItem {
   @PrimaryGeneratedColumn('uuid')
-  purchaseOrderItemID: string;
+  purchaseOrderItemID!: string;
 
   @ManyToOne(() => PurchaseOrder, (order) => order.items, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'purchaseOrderID' })
-  purchaseOrder: PurchaseOrder;
+  purchaseOrder!: PurchaseOrder;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })
-  variation: ProductVariation;
+  variation!: ProductVariation;
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  unitPrice: number;
+  unitPrice!: number;
 
   @Column('decimal', {
     precision: 12,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  subtotal: number;
+  subtotal!: number;
 
   @Column('int')
-  quantityRequested: number;
+  quantityRequested!: number;
 
   @Column('int', { default: 0 })
-  quantityReceived: number;
+  quantityReceived!: number;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

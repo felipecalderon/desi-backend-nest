@@ -1,14 +1,27 @@
-import { Controller, Post, Body, Get, Query, Param } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { PricingService } from './pricing.service';
+import { OfferService } from './offer.service';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { CreateSpecialOfferDto } from './dto/create-special-offer.dto';
 import { UpdateSpecialOfferDto } from './dto/update-special-offer.dto';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CalculatePriceDto } from './dto/calculate-price.dto';
 
 @ApiTags('Precios de productos')
 @Controller('pricing')
 export class PricingController {
-  constructor(private readonly pricingService: PricingService) {}
+  constructor(
+    private readonly pricingService: PricingService,
+    private readonly offerService: OfferService,
+  ) {}
 
   @Post('update')
   @ApiOperation({ summary: 'Actualizar precio y registrar historial' })
@@ -21,8 +34,8 @@ export class PricingController {
     summary: 'Obtener historial de precios de un producto de tienda',
   })
   getPriceHistory(
-    @Query('storeID') storeID: string,
-    @Query('variationID') variationID: string,
+    @Query('storeID', ParseUUIDPipe) storeID: string,
+    @Query('variationID', ParseUUIDPipe) variationID: string,
   ) {
     return this.pricingService.getPriceHistory(storeID, variationID);
   }
@@ -30,21 +43,32 @@ export class PricingController {
   @Post('offers')
   @ApiOperation({ summary: 'Crear una oferta especial' })
   createOffer(@Body() createSpecialOfferDto: CreateSpecialOfferDto) {
-    return this.pricingService.createSpecialOffer(createSpecialOfferDto);
+    return this.offerService.createSpecialOffer(createSpecialOfferDto);
   }
 
   @Post('offers/:id')
   @ApiOperation({ summary: 'Actualizar una oferta especial' })
   updateOffer(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateSpecialOfferDto: UpdateSpecialOfferDto,
   ) {
-    return this.pricingService.updateSpecialOffer(id, updateSpecialOfferDto);
+    return this.offerService.updateSpecialOffer(id, updateSpecialOfferDto);
+  }
+
+  @Post('calculate')
+  @ApiOperation({
+    summary: 'Calcular precio final con motor de precios y contexto opcional',
+  })
+  @ApiBody({ type: CalculatePriceDto })
+  calculate(@Body() input: CalculatePriceDto) {
+    return this.pricingService.calculatePrice(input);
   }
 
   @Get('price-check/:storeProductID')
-  @ApiOperation({ summary: 'Calcular precio final incluyendo ofertas activas' })
-  checkPrice(@Param('storeProductID') storeProductID: string) {
-    return this.pricingService.calculateFinalPrice(storeProductID);
+  @ApiOperation({
+    summary: 'Calcular precio final rápido con cantidad 1 e historial activo',
+  })
+  checkPrice(@Param('storeProductID', ParseUUIDPipe) storeProductID: string) {
+    return this.pricingService.calculatePrice({ storeProductID, quantity: 1 });
   }
 }

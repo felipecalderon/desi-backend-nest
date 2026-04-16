@@ -1,17 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { ProductVariation } from './entities/product-variation.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { PricingService } from '../pricing/pricing.service';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { Store } from '../stores/entities/store.entity';
 import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
-import {
-  DiscountType,
-  SpecialOffer,
-} from '../pricing/entities/special-offer.entity';
+import { DiscountType } from '../pricing/entities/special-offer.entity';
 
 @Injectable()
 export class ProductsService {
@@ -21,6 +19,7 @@ export class ProductsService {
     @InjectRepository(ProductVariation)
     private readonly variationRepository: Repository<ProductVariation>,
     private readonly entityManager: EntityManager,
+    @Optional() private readonly pricingService?: PricingService,
   ) {}
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
@@ -89,44 +88,63 @@ export class ProductsService {
       for (const variation of product.variations) {
         if (!variation.storeProducts) continue;
         for (const sp of variation.storeProducts) {
-          // Logic similar to PricingService.calculateFinalPrice
-          const offers = sp['specialOffers'] || []; // TypeORM relation
-          // Sort offers by startDate DESC to get latest
-          const activeOffer = offers.sort(
-            (a, b) => b.startDate.getTime() - a.startDate.getTime(),
-          )[0];
-
-          let finalPrice = sp.priceList || 0;
-          let discountApplied = false;
-          let discountDetails = null;
-
-          if (activeOffer) {
-            const originalPrice = finalPrice;
-            switch (activeOffer.discountType) {
-              case DiscountType.PERCENTAGE:
-                finalPrice = originalPrice * (1 - activeOffer.value / 100);
-                break;
-              case DiscountType.FIXED_AMOUNT:
-                finalPrice = Math.max(0, originalPrice - activeOffer.value);
-                break;
-              case DiscountType.FIXED_PRICE:
-                finalPrice = Number(activeOffer.value);
-                break;
+          if (this.pricingService) {
+            try {
+              const result = await this.pricingService.calculatePrice({
+                storeProductID: sp.storeProductID,
+                quantity: 1,
+              });
+              (sp as any).finalPrice = result.finalPrice;
+              (sp as any).discountApplied = result.discountApplied;
+              (sp as any).activeOffer = result.discountDetails;
+              (sp as any).pricingBreakdown = result.breakdown;
+            } catch (e) {
+              (sp as any).pricingError = e.message || 'Error calculando precio';
             }
-            finalPrice = Math.round(finalPrice * 100) / 100;
-            discountApplied = true;
-            discountDetails = {
-              offerID: activeOffer.offerID,
-              description: activeOffer.description,
-              type: activeOffer.discountType,
-              value: activeOffer.value,
-            };
-          }
+          } else {
+            const offers = sp['specialOffers'] || []; // TypeORM relation
+            const activeOffer = offers.sort(
+              (a, b) =>
+                (b.startDate?.getTime?.() || 0) -
+                (a.startDate?.getTime?.() || 0),
+            )[0];
 
-          // Attach to StoreProduct object
-          (sp as any).finalPrice = finalPrice;
-          (sp as any).discountApplied = discountApplied;
-          (sp as any).activeOffer = discountDetails;
+            let finalPrice = sp.priceList || 0;
+            let discountApplied = false;
+            let discountDetails: {
+              offerID: string;
+              description: string | undefined;
+              type: DiscountType;
+              value: number;
+            } | null = null;
+
+            if (activeOffer) {
+              const originalPrice = finalPrice;
+              switch (activeOffer.discountType) {
+                case DiscountType.PERCENTAGE:
+                  finalPrice = originalPrice * (1 - activeOffer.value / 100);
+                  break;
+                case DiscountType.FIXED_AMOUNT:
+                  finalPrice = Math.max(0, originalPrice - activeOffer.value);
+                  break;
+                case DiscountType.FIXED_PRICE:
+                  finalPrice = Number(activeOffer.value);
+                  break;
+              }
+              finalPrice = Math.round(finalPrice * 100) / 100;
+              discountApplied = true;
+              discountDetails = {
+                offerID: activeOffer.offerID,
+                description: activeOffer.description,
+                type: activeOffer.discountType,
+                value: activeOffer.value,
+              };
+            }
+
+            (sp as any).finalPrice = finalPrice;
+            (sp as any).discountApplied = discountApplied;
+            (sp as any).activeOffer = discountDetails;
+          }
         }
       }
     }

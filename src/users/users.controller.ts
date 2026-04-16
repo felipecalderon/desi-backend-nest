@@ -13,10 +13,10 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
-import { Store } from 'src/stores/entities/store.entity';
-import { CustomMessage } from 'src/common/decorators/response-message';
+import { Store } from '../stores/entities/store.entity';
+import { CustomMessage } from '../common/decorators/response-message';
 import { User } from './entities/user.entity';
-import { Public } from 'src/auth/decorators/public.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('Usuarios')
 @Controller('users')

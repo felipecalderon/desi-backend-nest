@@ -16,14 +16,19 @@ export enum DiscountType {
   FIXED_PRICE = 'FIXED_PRICE', // e.g., Final price $9990
 }
 
+export enum DiscountScope {
+  UNIT = 'UNIT',
+  TOTAL = 'TOTAL',
+}
+
 @Entity({ name: 'SpecialOffer' })
 export class SpecialOffer {
   @PrimaryGeneratedColumn('uuid')
-  offerID: string;
+  offerID!: string;
 
   @ManyToOne(() => StoreProduct, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeProductID' })
-  storeProduct: StoreProduct;
+  storeProduct!: StoreProduct;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   description?: string;
@@ -32,27 +37,37 @@ export class SpecialOffer {
     type: 'enum',
     enum: DiscountType,
   })
-  discountType: DiscountType;
+  discountType!: DiscountType;
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  value: number;
+  value!: number;
+
+  @Column({
+    type: 'enum',
+    enum: DiscountScope,
+    default: DiscountScope.UNIT,
+  })
+  scope!: DiscountScope;
+
+  @Column({ type: 'boolean', default: false })
+  exclusive!: boolean;
 
   @Column({ type: 'timestamp with time zone' })
-  startDate: Date;
+  startDate!: Date;
 
   @Column({ type: 'timestamp with time zone', nullable: true })
   endDate?: Date;
 
   @Column({ type: 'boolean', default: true })
-  isActive: boolean;
+  isActive!: boolean;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

@@ -7,7 +7,7 @@ import {
   IsDateString,
   IsBoolean,
 } from 'class-validator';
-import { DiscountType } from '../entities/special-offer.entity';
+import { DiscountType, DiscountScope } from '../entities/special-offer.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateSpecialOfferDto {
@@ -33,6 +33,24 @@ export class CreateSpecialOfferDto {
   @ApiProperty({ description: 'Valor numérico del descuento o precio final' })
   @IsNumber()
   value: number;
+
+  @ApiProperty({
+    description:
+      'Ámbito del descuento: UNIT (por unidad) o TOTAL (sobre el total)',
+    enum: DiscountScope,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(DiscountScope)
+  scope?: DiscountScope;
+
+  @ApiProperty({
+    description: 'Si la oferta es exclusiva (impide descuentos manuales)',
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  exclusive?: boolean;
 
   @ApiProperty({
     description: 'Fecha de inicio de la oferta',

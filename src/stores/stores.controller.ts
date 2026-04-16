@@ -10,10 +10,10 @@ import {
 import { StoresService } from './stores.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Store } from './entities/store.entity';
-import { CustomMessage } from 'src/common/decorators/response-message';
+import { CustomMessage } from '../common/decorators/response-message';
 
 @ApiTags('Tiendas')
 @Controller('stores')

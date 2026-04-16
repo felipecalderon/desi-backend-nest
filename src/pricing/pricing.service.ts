@@ -8,19 +8,25 @@ import { Repository, DataSource } from 'typeorm';
 import { PriceHistory, PriceType } from './entities/price-history.entity';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
-import { SpecialOffer, DiscountType } from './entities/special-offer.entity';
-import { CreateSpecialOfferDto } from './dto/create-special-offer.dto';
-import { UpdateSpecialOfferDto } from './dto/update-special-offer.dto';
-import { LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
+import { DiscountType, DiscountScope } from './entities/special-offer.entity';
+import {
+  AppliedDiscount,
+  PricingInput,
+  PricingResult,
+} from './dto/pricing.dto';
+import { OfferService } from './offer.service';
+import { MarginValidator } from './validators/margin.validator';
+import { UserDiscountValidator } from './validators/user-discount.validator';
 
 @Injectable()
 export class PricingService {
   constructor(
     @InjectRepository(PriceHistory)
     private readonly priceHistoryRepository: Repository<PriceHistory>,
-    @InjectRepository(SpecialOffer)
-    private readonly specialOfferRepository: Repository<SpecialOffer>,
     private readonly dataSource: DataSource,
+    private readonly offerService: OfferService,
+    private readonly marginValidator: MarginValidator,
+    private readonly userDiscountValidator: UserDiscountValidator,
   ) {}
 
   async updatePrice(updatePriceDto: UpdatePriceDto): Promise<PriceHistory> {
@@ -83,173 +89,292 @@ export class PricingService {
     });
   }
 
-  // --- SPECIAL OFFERS ---
-
-  async createSpecialOffer(
-    createSpecialOfferDto: CreateSpecialOfferDto,
-  ): Promise<SpecialOffer> {
-    const { storeProductID, startDate, endDate } = createSpecialOfferDto;
-
-    // Check for overlapping active offers
-    const overlappingDetails = await this.checkOverlap(
+  async calculatePrice(input: PricingInput): Promise<PricingResult> {
+    const {
       storeProductID,
-      startDate,
-      endDate,
-    );
-    if (overlappingDetails) {
+      quantity = 1,
+      userID = null,
+      manualDiscount,
+      baseUnitPrice,
+      priceCost,
+    } = input;
+
+    if (!quantity || quantity <= 0) {
+      throw new BadRequestException('Quantity must be greater than zero');
+    }
+    if (
+      manualDiscount !== undefined &&
+      (typeof manualDiscount !== 'number' ||
+        manualDiscount < 0 ||
+        manualDiscount > 100)
+    ) {
       throw new BadRequestException(
-        `No se puede crear la oferta. Se solapa con la oferta existente ${overlappingDetails.offerID} (${overlappingDetails.startDate} - ${overlappingDetails.endDate})`,
+        'manualDiscount must be a number between 0 and 100',
       );
     }
 
-    const offer = this.specialOfferRepository.create(createSpecialOfferDto);
-    return this.specialOfferRepository.save(offer);
-  }
+    const pricingDate =
+      input.pricingDate instanceof Date
+        ? input.pricingDate
+        : input.pricingDate
+          ? new Date(input.pricingDate)
+          : new Date();
 
-  private async checkOverlap(
-    storeProductID: string,
-    startDateStr: string,
-    endDateStr?: string,
-  ): Promise<SpecialOffer | null> {
-    const start = new Date(startDateStr);
-    const end = endDateStr ? new Date(endDateStr) : null;
+    if (Number.isNaN(pricingDate.getTime())) {
+      throw new BadRequestException('pricingDate must be a valid date');
+    }
 
-    // Base Query: Same store product and active
-    const query = this.specialOfferRepository
-      .createQueryBuilder('offer')
-      .where('offer.storeProduct = :storeProductID', { storeProductID })
-      .andWhere('offer.isActive = :isActive', { isActive: true });
+    let storeProduct: StoreProduct | null = null;
+    const shouldLoadStoreProduct =
+      baseUnitPrice === undefined ||
+      priceCost === undefined ||
+      manualDiscount !== undefined;
 
-    // Overlap Logic:
-    // (StartA <= EndB) and (EndA >= StartB)
-    // If EndB is null (infinity), then (EndA >= StartB) is enough? No.
+    if (shouldLoadStoreProduct) {
+      storeProduct = await this.dataSource.manager.findOne(StoreProduct, {
+        where: { storeProductID },
+        relations: ['store', 'variation', 'variation.product'],
+      });
+      if (!storeProduct) {
+        throw new NotFoundException('Producto de tienda no encontrado');
+      }
+    }
 
-    // Existing Offer (A), New Offer (B)
-    // A.start <= B.end AND (A.end IS NULL OR A.end >= B.start)
+    const { unitPrice, unitCost } = await this.resolveBasePricing({
+      storeProduct,
+      baseUnitPrice,
+      priceCost,
+    });
 
-    if (end) {
-      // New offer has specific end date
-      query.andWhere(
-        '(offer.startDate <= :end) AND (offer.endDate IS NULL OR offer.endDate >= :start)',
-        { start, end },
-      );
-    } else {
-      // New offer is infinite (endDate is null)
-      // Overlaps if Existing Offer ends AFTER new start, or is infinite
-      query.andWhere('(offer.endDate IS NULL OR offer.endDate >= :start)', {
-        start,
+    const basePrice = unitPrice * quantity;
+    let price = basePrice;
+    const pricingContext: PricingResult['pricingContext'] = {
+      pricingDate: pricingDate.toISOString(),
+      storeID: storeProduct?.store?.storeID,
+      productID: storeProduct?.variation?.product?.productID,
+      variationID: storeProduct?.variation?.variationID,
+      storeType: storeProduct?.store?.type,
+    };
+
+    const breakdown: PricingResult['breakdown'] = [
+      {
+        step: 'basePrice',
+        previousPrice: basePrice,
+        newPrice: basePrice,
+        delta: 0,
+        scope: 'TOTAL',
+        details: { unitPrice, quantity },
+      },
+    ];
+
+    const discountsApplied: AppliedDiscount[] = [];
+    const activeOffer = await this.offerService.getBestOffer(
+      storeProductID,
+      unitPrice,
+      quantity,
+      pricingDate,
+    );
+    let discountApplied = false;
+    let discountDetails: AppliedDiscount | null = null;
+
+    if (activeOffer) {
+      const prev = price;
+      let next = price;
+      const scope: DiscountScope = activeOffer.scope ?? DiscountScope.UNIT;
+      const currentUnitPrice = price / quantity;
+
+      switch (activeOffer.discountType) {
+        case DiscountType.PERCENTAGE:
+          if (scope === DiscountScope.UNIT) {
+            const unitAfter = currentUnitPrice * (1 - activeOffer.value / 100);
+            next = unitAfter * quantity;
+          } else {
+            next = price * (1 - activeOffer.value / 100);
+          }
+          break;
+        case DiscountType.FIXED_AMOUNT:
+          if (scope === DiscountScope.UNIT) {
+            const unitAfter = Math.max(0, currentUnitPrice - activeOffer.value);
+            next = unitAfter * quantity;
+          } else {
+            next = Math.max(0, price - activeOffer.value);
+          }
+          break;
+        case DiscountType.FIXED_PRICE:
+          if (scope === DiscountScope.UNIT) {
+            next = activeOffer.value * quantity;
+          } else {
+            next = activeOffer.value;
+          }
+          break;
+      }
+
+      price = next;
+      discountApplied = true;
+      discountDetails = {
+        source: 'AUTO',
+        applied: true,
+        previousPrice: prev,
+        resultingPrice: next,
+        offerID: activeOffer.offerID,
+        description: activeOffer.description,
+        discountType: activeOffer.discountType,
+        value: activeOffer.value,
+        scope,
+        exclusive: !!activeOffer.exclusive,
+        priority: activeOffer.priority,
+      };
+      discountsApplied.push(discountDetails);
+
+      breakdown.push({
+        step: 'automaticOffer',
+        previousPrice: prev,
+        newPrice: next,
+        delta: next - prev,
+        scope,
+        details: {
+          offerID: activeOffer.offerID,
+          type: activeOffer.discountType,
+          value: activeOffer.value,
+          priority: activeOffer.priority,
+        },
       });
     }
 
-    return query.getOne();
-  }
+    if (manualDiscount !== undefined && manualDiscount !== null) {
+      if (discountDetails?.exclusive) {
+        // Offer is exclusive, manual discounts are ignored
+        discountsApplied.push({
+          source: 'MANUAL',
+          applied: false,
+          previousPrice: price,
+          resultingPrice: price,
+          scope: 'TOTAL',
+          manualDiscount,
+          reasonIgnored: 'exclusive_offer',
+        });
+        breakdown.push({
+          step: 'manualDiscount_ignored',
+          previousPrice: price,
+          newPrice: price,
+          delta: 0,
+          scope: 'TOTAL',
+          details: { reason: 'exclusive_offer' },
+        });
+      } else {
+        if (!storeProduct) {
+          throw new NotFoundException('Producto de tienda no encontrado');
+        }
 
-  async updateSpecialOffer(
-    offerID: string,
-    updateSpecialOfferDto: UpdateSpecialOfferDto,
-  ): Promise<SpecialOffer> {
-    const offer = await this.specialOfferRepository.findOne({
-      where: { offerID },
-    });
-    if (!offer) throw new NotFoundException('Oferta especial no encontrada');
+        await this.userDiscountValidator.validate({
+          userID,
+          manualDiscount,
+          storeProduct,
+          baseUnitPrice: unitPrice,
+          currentUnitPrice: price / quantity,
+          quantity,
+        });
 
-    Object.assign(offer, updateSpecialOfferDto);
-    return this.specialOfferRepository.save(offer);
-  }
-
-  async getActiveOffer(storeProductID: string): Promise<SpecialOffer | null> {
-    const now = new Date();
-
-    // Find checking dates and active status.
-    // If multiple active offers exist (e.g. overlapping), we need a strategy.
-    // Strategy: Take the one with the latest start date (most recent).
-    // Alternatively, we could pick the "best discount". For now, let's pick the most recent one.
-
-    const offers = await this.specialOfferRepository.find({
-      where: [
-        // Case 1: endDate is defined
-        {
-          storeProduct: { storeProductID },
-          isActive: true,
-          startDate: LessThanOrEqual(now),
-          endDate: MoreThanOrEqual(now),
-        },
-        // Case 2: endDate is null (indefinite)
-        {
-          storeProduct: { storeProductID },
-          isActive: true,
-          startDate: LessThanOrEqual(now),
-          endDate: IsNull(),
-        },
-      ],
-      order: {
-        startDate: 'DESC',
-      },
-      take: 1,
-    });
-
-    return offers.length > 0 ? offers[0] : null;
-  }
-
-  async calculateFinalPrice(storeProductID: string) {
-    // 1. Get Base Price
-    // We need to fetch the StoreProduct to get the list price.
-    // Since we don't have StoreProductRepository injected here, we can use dataSource or just a relation query if we had one.
-    // Let's rely on the module having access or fetching via DataSource as done in updatePrice.
-
-    const storeProduct = await this.dataSource.manager.findOne(StoreProduct, {
-      where: { storeProductID },
-    });
-
-    if (!storeProduct) {
-      throw new NotFoundException('Producto de tienda no encontrado');
+        const prev = price;
+        price = price * (1 - manualDiscount / 100);
+        discountsApplied.push({
+          source: 'MANUAL',
+          applied: true,
+          previousPrice: prev,
+          resultingPrice: price,
+          scope: 'TOTAL',
+          manualDiscount,
+        });
+        breakdown.push({
+          step: 'manualDiscount',
+          previousPrice: prev,
+          newPrice: price,
+          delta: price - prev,
+          scope: 'TOTAL',
+          details: { manualDiscount },
+        });
+        discountApplied = true;
+      }
     }
 
-    const originalPrice = storeProduct.priceList || 0;
+    const finalUnitPrice = price / quantity;
+    this.marginValidator.validate(unitCost, finalUnitPrice);
 
-    // 2. Get Active Offer
-    const activeOffer = await this.getActiveOffer(storeProductID);
+    const finalPrice = Math.round(price * 100) / 100;
 
-    if (!activeOffer) {
-      return {
-        originalPrice,
-        finalPrice: originalPrice,
-        discountApplied: false,
-        discountDetails: null,
-      };
-    }
-
-    // 3. Calculate Discount
-    let finalPrice = originalPrice;
-
-    switch (activeOffer.discountType) {
-      case DiscountType.PERCENTAGE:
-        // Value is percentage, e.g. 20 for 20%
-        finalPrice = originalPrice * (1 - activeOffer.value / 100);
-        break;
-      case DiscountType.FIXED_AMOUNT:
-        // Value is amount to subtract, e.g. 1000
-        finalPrice = Math.max(0, originalPrice - activeOffer.value);
-        break;
-      case DiscountType.FIXED_PRICE:
-        // Value is the new price
-        finalPrice = activeOffer.value;
-        break;
-    }
-
-    // Round to 2 decimals if needed, but for currency usually integer or 2 decimals.
-    finalPrice = Math.round(finalPrice * 100) / 100;
+    const roundedBreakdown = breakdown.map((b) => ({
+      ...b,
+      previousPrice: Math.round(b.previousPrice * 100) / 100,
+      newPrice: Math.round(b.newPrice * 100) / 100,
+      delta: Math.round(b.delta * 100) / 100,
+    }));
 
     return {
-      originalPrice,
+      basePrice,
       finalPrice,
-      discountApplied: true,
-      discountDetails: {
-        offerID: activeOffer.offerID,
-        description: activeOffer.description,
-        type: activeOffer.discountType,
-        value: activeOffer.value,
-      },
+      breakdown: roundedBreakdown,
+      discountApplied,
+      discountsApplied,
+      discountDetails,
+      pricingContext,
     };
+  }
+
+  private async resolveBasePricing({
+    storeProduct,
+    baseUnitPrice,
+    priceCost,
+  }: {
+    storeProduct: StoreProduct | null;
+    baseUnitPrice?: number;
+    priceCost?: number;
+  }): Promise<{ unitPrice: number; unitCost: number }> {
+    let unitPrice =
+      baseUnitPrice !== undefined
+        ? baseUnitPrice
+        : typeof storeProduct?.priceList === 'number'
+          ? storeProduct.priceList
+          : 0;
+
+    let unitCost =
+      priceCost !== undefined
+        ? priceCost
+        : typeof storeProduct?.priceCost === 'number'
+          ? storeProduct.priceCost
+          : 0;
+
+    const needsFallback =
+      storeProduct !== null &&
+      storeProduct.variation?.variationID &&
+      (unitPrice <= 0 || unitCost <= 0);
+
+    if (!needsFallback) {
+      return { unitPrice, unitCost };
+    }
+
+    const centralStoreProduct = await this.dataSource.manager.findOne(
+      StoreProduct,
+      {
+        where: {
+          store: { isCentralStore: true },
+          variation: { variationID: storeProduct.variation.variationID },
+        },
+        relations: ['store'],
+      },
+    );
+
+    if (!centralStoreProduct) {
+      return { unitPrice, unitCost };
+    }
+
+    if (unitPrice <= 0 && typeof centralStoreProduct.priceList === 'number') {
+      unitPrice = centralStoreProduct.priceList;
+    }
+
+    if (unitCost <= 0 && typeof centralStoreProduct.priceCost === 'number') {
+      unitCost = centralStoreProduct.priceCost;
+    }
+
+    return { unitPrice, unitCost };
   }
 }

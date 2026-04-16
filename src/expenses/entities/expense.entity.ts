@@ -24,21 +24,21 @@ export class Expense {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
   @ApiProperty({
     description: 'Nombre o descripción del gasto',
     example: 'Servicios de limpieza',
   })
   @Column({ type: 'varchar', length: 255 })
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Fecha del gasto para fines contables',
     example: '2023-10-27T10:00:00Z',
   })
   @Column({ type: 'timestamp with time zone', name: 'deductibleDate' })
-  deductibleDate: Date;
+  deductibleDate!: Date;
 
   @ApiProperty({
     description: 'Monto total del gasto',
@@ -49,7 +49,7 @@ export class Expense {
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  amount: number;
+  amount!: number;
 
   @ApiProperty({
     description: 'Categoría del gasto',
@@ -60,21 +60,21 @@ export class Expense {
     type: 'enum',
     enum: ExpenseType,
   })
-  type: ExpenseType;
+  type!: ExpenseType;
 
   @ManyToOne(() => Store, (store) => store.expenses)
   @JoinColumn({ name: 'storeID' })
-  store: Store;
+  store!: Store;
 
   @ApiProperty({
     description: 'Fecha de creación del registro',
   })
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'createdAt' })
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: 'Fecha de la última actualización',
   })
   @UpdateDateColumn({ type: 'timestamp with time zone', name: 'updatedAt' })
-  updatedAt: Date;
+  updatedAt!: Date;
 }

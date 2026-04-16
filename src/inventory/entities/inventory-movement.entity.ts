@@ -25,15 +25,15 @@ export class InventoryMovement {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @PrimaryGeneratedColumn('uuid')
-  movementID: string;
+  movementID!: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
-  store: Store;
+  store!: Store;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })
-  variation: ProductVariation;
+  variation!: ProductVariation;
 
   @ApiProperty({
     description:
@@ -41,7 +41,7 @@ export class InventoryMovement {
     example: -5,
   })
   @Column('int')
-  delta: number;
+  delta!: number;
 
   @ApiProperty({
     description: 'Motivo del movimiento de inventario',
@@ -52,7 +52,7 @@ export class InventoryMovement {
     type: 'enum',
     enum: InventoryMovementReason,
   })
-  reason: InventoryMovementReason;
+  reason!: InventoryMovementReason;
 
   @ApiProperty({
     description:
@@ -67,5 +67,5 @@ export class InventoryMovement {
     description: 'Fecha y hora del movimiento',
   })
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 }

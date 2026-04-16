@@ -17,37 +17,37 @@ export enum PriceType {
 @Entity({ name: 'PriceHistory' })
 export class PriceHistory {
   @PrimaryGeneratedColumn('uuid')
-  historyID: string;
+  historyID!: string;
 
   @ManyToOne(() => StoreProduct, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeProductID' })
-  storeProduct: StoreProduct;
+  storeProduct!: StoreProduct;
 
   @Column({
     type: 'enum',
     enum: PriceType,
   })
-  priceType: PriceType;
+  priceType!: PriceType;
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  oldPrice: number;
+  oldPrice!: number;
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  newPrice: number;
+  newPrice!: number;
 
   @Column({ type: 'varchar', nullable: true })
   reason?: string;
 
   @CreateDateColumn()
-  effectiveDate: Date;
+  effectiveDate!: Date;
 
   @Column({ type: 'varchar', nullable: true })
   changedBy?: string;

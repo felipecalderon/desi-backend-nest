@@ -10,5 +10,5 @@ export class UpdateStorePriceDto {
   })
   @IsNumber()
   @IsPositive()
-  priceList: number;
+  priceList!: number;
 }

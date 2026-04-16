@@ -18,29 +18,29 @@ import { ColumnNumericTransformer } from '../../../common/transformers/numeric.t
 @Index(['variation', 'store'], { unique: true })
 export class StoreProduct {
   @PrimaryGeneratedColumn('uuid')
-  storeProductID: string;
+  storeProductID!: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'storeID' })
-  store: Store;
+  store!: Store;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })
-  variation: ProductVariation;
+  variation!: ProductVariation;
 
   /**
    * @deprecated logic should use InventoryMovements as source of truth.
    * This field is a CACHE / READ MODEL derived from movements.
    */
   @Column('int', { default: 0 })
-  stock: number;
+  stock!: number;
 
   @Column('decimal', {
     precision: 10,
     scale: 2,
     transformer: new ColumnNumericTransformer(),
   })
-  priceCost: number; // Precio al que la tienda compró este producto
+  priceCost!: number; // Precio al que la tienda compró este producto
 
   @Column('decimal', {
     precision: 10,
@@ -51,11 +51,11 @@ export class StoreProduct {
   priceList?: number; // Precio de venta en la tienda
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @OneToMany(() => SpecialOffer, (offer) => offer.storeProduct)
-  specialOffers: SpecialOffer[];
+  specialOffers!: SpecialOffer[];
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

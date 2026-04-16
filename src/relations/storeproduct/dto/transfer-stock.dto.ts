@@ -17,7 +17,7 @@ class StockTransferItemDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  variationID: string;
+  variationID!: string;
 
   @ApiProperty({
     description: 'Cantidad de unidades a transferir',
@@ -26,7 +26,7 @@ class StockTransferItemDto {
   })
   @IsInt()
   @IsPositive()
-  stock: number;
+  stock!: number;
 
   @ApiProperty({
     description:
@@ -36,7 +36,7 @@ class StockTransferItemDto {
   })
   @IsNumber()
   @IsPositive()
-  priceCost: number;
+  priceCost!: number;
 }
 
 export class TransferStockDto {
@@ -46,7 +46,7 @@ export class TransferStockDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  targetStoreID: string;
+  targetStoreID!: string;
 
   @ApiProperty({
     type: [StockTransferItemDto],
@@ -62,5 +62,5 @@ export class TransferStockDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => StockTransferItemDto)
-  items: StockTransferItemDto[];
+  items!: StockTransferItemDto[];
 }

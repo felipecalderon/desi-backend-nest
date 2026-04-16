@@ -27,15 +27,15 @@ export class StoreTransfer {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @PrimaryGeneratedColumn('uuid')
-  transferID: string;
+  transferID!: string;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'originStoreID' })
-  originStore: Store;
+  originStore!: Store;
 
   @ManyToOne(() => Store, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'destinationStoreID' })
-  destinationStore: Store;
+  destinationStore!: Store;
 
   @ApiProperty({
     description: 'Estado actual de la transferencia',
@@ -47,7 +47,7 @@ export class StoreTransfer {
     enum: TransferStatus,
     default: TransferStatus.PENDING,
   })
-  status: TransferStatus;
+  status!: TransferStatus;
 
   @ApiProperty({
     description: 'Lista de productos incluidos en la transferencia',
@@ -56,19 +56,19 @@ export class StoreTransfer {
   @OneToMany(() => StoreTransferItem, (item) => item.transfer, {
     cascade: true,
   })
-  items: StoreTransferItem[];
+  items!: StoreTransferItem[];
 
   @ApiProperty({
     description: 'Fecha de creación del registro',
   })
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @ApiProperty({
     description: 'Fecha de última modificación',
   })
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 
   @ApiProperty({
     description: 'Fecha y hora en que se completó la transferencia',

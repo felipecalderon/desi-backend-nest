@@ -20,17 +20,17 @@ export class StoreTransferItem {
     example: '550e8400-e29b-41d4-a716-446655440000',
   })
   @PrimaryGeneratedColumn('uuid')
-  transferItemID: string;
+  transferItemID!: string;
 
   @ManyToOne(() => StoreTransfer, (transfer) => transfer.items, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'transferID' })
-  transfer: StoreTransfer;
+  transfer!: StoreTransfer;
 
   @ManyToOne(() => ProductVariation, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'variationID' })
-  variation: ProductVariation;
+  variation!: ProductVariation;
 
   @ApiProperty({
     description: 'Cantidad de unidades transferidas',
@@ -38,5 +38,5 @@ export class StoreTransferItem {
     minimum: 1,
   })
   @Column('int')
-  quantity: number;
+  quantity!: number;
 }

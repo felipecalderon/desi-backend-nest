@@ -69,7 +69,9 @@ describe('ExpensesService', () => {
 
       const result = await service.create(createDto);
 
-      expect(mockExpenseRepository.create).toHaveBeenCalledWith(createDto);
+      expect(mockExpenseRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ store: { storeID: 'store-uuid-1' } }),
+      );
       expect(mockExpenseRepository.save).toHaveBeenCalled();
       expect(result).toHaveProperty('id', 'new-expense-uuid');
     });

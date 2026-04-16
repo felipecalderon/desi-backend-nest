@@ -9,5 +9,5 @@ export class UpdateSaleStatusDto {
     example: 'Pagado',
   })
   @IsEnum(['Pagado', 'Pendiente', 'Anulado'])
-  status: 'Pagado' | 'Pendiente' | 'Anulado';
+  status!: 'Pagado' | 'Pendiente' | 'Anulado';
 }

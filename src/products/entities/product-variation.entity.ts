@@ -15,20 +15,20 @@ import { StoreProduct } from '../../relations/storeproduct/entities/storeproduct
 @Entity({ name: 'ProductVariations' })
 export class ProductVariation {
   @PrimaryGeneratedColumn('uuid')
-  variationID: string;
+  variationID!: string;
 
   @ManyToOne(() => Product, (product) => product.variations, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'productID' })
-  product: Product;
+  product!: Product;
 
   @OneToMany(() => StoreProduct, (storeProduct) => storeProduct.variation)
-  storeProducts: StoreProduct[];
+  storeProducts!: StoreProduct[];
 
   @Index({ unique: true })
   @Column({ type: 'varchar', length: 255, unique: true })
-  sku: string;
+  sku!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   color?: string;
@@ -37,8 +37,8 @@ export class ProductVariation {
   size?: string;
 
   @CreateDateColumn()
-  createdAt: Date;
+  createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt: Date;
+  updatedAt!: Date;
 }

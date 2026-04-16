@@ -17,7 +17,7 @@ export class CreateExpenseDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 
   @ApiProperty({
     description: 'Fecha deducible del gasto',
@@ -25,7 +25,7 @@ export class CreateExpenseDto {
   })
   @IsDateString()
   @IsNotEmpty()
-  deductibleDate: string; // IsDateString validates ISO 8601 strings
+  deductibleDate!: string; // IsDateString validates ISO 8601 strings
 
   @ApiProperty({
     description: 'Monto del gasto',
@@ -33,7 +33,7 @@ export class CreateExpenseDto {
   })
   @IsNumber()
   @IsPositive()
-  amount: number;
+  amount!: number;
 
   @ApiProperty({
     description: 'Tipo de gasto',
@@ -42,7 +42,7 @@ export class CreateExpenseDto {
   })
   @IsEnum(ExpenseType)
   @IsNotEmpty()
-  type: ExpenseType;
+  type!: ExpenseType;
 
   @ApiProperty({
     description: 'ID de la tienda asociada al gasto',
@@ -50,5 +50,5 @@ export class CreateExpenseDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  storeID: string;
+  storeID!: string;
 }
