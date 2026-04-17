@@ -8,6 +8,7 @@ import {
 } from 'typeorm';
 import { UserStore } from '../../relations/userstores/entities/userstore.entity';
 import { Expense } from '../../expenses/entities/expense.entity';
+import { StoreMonthlyTarget } from '../../store-monthly-targets/entities/store-monthly-target.entity';
 
 export enum StoreType {
   CENTRAL = 'central',
@@ -71,11 +72,14 @@ export class Store {
   })
   isCentralStore!: boolean;
 
-  @OneToMany(() => UserStore, (userStore) => userStore.store)
+  @OneToMany('UserStore', 'store')
   userStores!: UserStore[];
 
-  @OneToMany(() => Expense, (expense) => expense.store)
+  @OneToMany('Expense', 'store')
   expenses!: Expense[];
+
+  @OneToMany('StoreMonthlyTarget', 'store')
+  monthlyTargets!: StoreMonthlyTarget[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'createdAt' })
   createdAt!: Date;
