@@ -10,6 +10,7 @@ import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
 import { StoreProductModule } from './relations/storeproduct/storeproduct.module';
 import { SalesModule } from './sales/sales.module';
+import { ReportsModule } from './reports/reports.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { ExpensesModule } from './expenses/expenses.module';
 import { InventoryModule } from './inventory/inventory.module';
@@ -29,6 +30,7 @@ import { StoreMonthlyTargetsModule } from './store-monthly-targets/store-monthly
     CategoriesModule,
     StoreProductModule,
     SalesModule,
+    ReportsModule,
     PurchaseOrdersModule,
     ExpensesModule,
     InventoryModule,
