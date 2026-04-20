@@ -66,6 +66,20 @@ export class StoreMonthlyTargetsController {
     return this.storeMonthlyTargetsService.findOne(id);
   }
 
+  @Get('store/:storeID/current')
+  @ApiOperation({
+    summary: 'Obtener la meta mensual actual de una tienda por ID',
+  })
+  @ApiParam({ name: 'storeID', description: 'ID de la tienda', type: String })
+  @ApiResponse({
+    status: 200,
+    description: 'Meta mensual actual (0 si no existe).',
+  })
+  @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
+  getCurrent(@Param('storeID', ParseUUIDPipe) storeID: string) {
+    return this.storeMonthlyTargetsService.getCurrentTargetByStore(storeID);
+  }
+
   @Patch(':id')
   @ApiOperation({
     summary: 'Actualizar una meta mensual',

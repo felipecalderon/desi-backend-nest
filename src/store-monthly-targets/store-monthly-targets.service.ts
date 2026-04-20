@@ -102,6 +102,22 @@ export class StoreMonthlyTargetsService {
     return target;
   }
 
+  async getCurrentTargetByStore(storeID: string): Promise<number> {
+    const store = await this.storeRepository.findOne({ where: { storeID } });
+    if (!store) {
+      throw new NotFoundException(`Tienda con ID ${storeID} no encontrada`);
+    }
+    const currentMonthStart = this.getCurrentMonthStart();
+    const target = await this.targetRepository.findOne({
+      where: {
+        store: { storeID },
+        period: currentMonthStart,
+      },
+    });
+
+    return target ? Number(target.targetAmount) : 0;
+  }
+
   async update(
     id: string,
     updateStoreMonthlyTargetDto: UpdateStoreMonthlyTargetDto,
