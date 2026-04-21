@@ -103,19 +103,83 @@ export class StoreMonthlyTargetsService {
   }
 
   async getCurrentTargetByStore(storeID: string): Promise<number> {
+    return this.getTargetByStoreAndPeriod(storeID, undefined);
+  }
+
+  async getTargetByStoreAndPeriod(
+    storeID: string,
+    period?: string,
+  ): Promise<number> {
     const store = await this.storeRepository.findOne({ where: { storeID } });
     if (!store) {
       throw new NotFoundException(`Tienda con ID ${storeID} no encontrada`);
     }
-    const currentMonthStart = this.getCurrentMonthStart();
+
+    const normalizedPeriod = period
+      ? this.normalizeFlexiblePeriodString(period)
+      : this.getCurrentMonthStart();
+
     const target = await this.targetRepository.findOne({
       where: {
         store: { storeID },
-        period: currentMonthStart,
+        period: normalizedPeriod,
       },
     });
 
     return target ? Number(target.targetAmount) : 0;
+  }
+
+  private normalizeFlexiblePeriodString(period: string): Date {
+    // Accepts YYYY/MM/DD, YYYY/MM, YYYY-MM-DD, YYYY-MM
+    const normalized = period.replace(/\//g, '-');
+    const parts = normalized.split('-').map((p) => p.padStart(2, '0'));
+
+    let dateStr = '';
+    if (parts.length === 2) {
+      // YYYY-MM
+      dateStr = `${parts[0]}-${parts[1]}-01`;
+    } else if (parts.length === 3) {
+      // YYYY-MM-DD
+      dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
+    } else {
+      throw new BadRequestException('Formato de período inválido');
+    }
+
+    return this.normalizePeriod(dateStr);
+  }
+
+  async upsertByStore(
+    storeID: string,
+    upsertDto: { period?: string; targetAmount: number },
+  ): Promise<StoreMonthlyTarget> {
+    const store = await this.storeRepository.findOne({ where: { storeID } });
+    if (!store) {
+      throw new NotFoundException(`Tienda con ID ${storeID} no encontrada`);
+    }
+
+    const periodStart = upsertDto.period
+      ? this.normalizeFlexiblePeriodString(upsertDto.period)
+      : this.getCurrentMonthStart();
+
+    this.assertEditable(periodStart);
+
+    // Try find existing
+    const existing = await this.targetRepository.findOne({
+      where: { store: { storeID }, period: periodStart },
+    });
+
+    if (existing) {
+      existing.targetAmount = upsertDto.targetAmount;
+      return this.targetRepository.save(existing);
+    }
+
+    const created = this.targetRepository.create({
+      store,
+      period: periodStart,
+      targetAmount: upsertDto.targetAmount,
+    });
+
+    return this.targetRepository.save(created);
   }
 
   async update(
