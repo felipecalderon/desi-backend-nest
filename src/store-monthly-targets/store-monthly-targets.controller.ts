@@ -67,8 +67,8 @@ export class StoreMonthlyTargetsController {
     return this.storeMonthlyTargetsService.findOne(id);
   }
 
-  @Get('store/:storeID')
-  @Get('store/:storeID/:period')
+  @Get(':storeID')
+  @Get(':storeID/:period')
   @ApiOperation({
     summary:
       'Obtener la meta mensual de una tienda por ID. period opcional: YYYY-MM-DD, YYYY-MM o YYYY/MM/DD, YYYY/MM',
@@ -96,11 +96,11 @@ export class StoreMonthlyTargetsController {
     );
   }
 
-  @Post('store/:storeID/upsert')
+  @Post(':storeID')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary:
-      'Crear o actualizar (upsert) la meta mensual para la tienda en el periodo dado (por defecto mes actual).',
+      'Crear o actualizar la meta mensual para la tienda en el periodo dado (por defecto mes actual).',
   })
   @ApiParam({ name: 'storeID', description: 'ID de la tienda', type: String })
   @ApiResponse({
