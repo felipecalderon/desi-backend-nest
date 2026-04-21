@@ -67,7 +67,8 @@ export class StoreMonthlyTargetsController {
     return this.storeMonthlyTargetsService.findOne(id);
   }
 
-  @Get('store/:storeID/:period?')
+  @Get('store/:storeID')
+  @Get('store/:storeID/:period')
   @ApiOperation({
     summary:
       'Obtener la meta mensual de una tienda por ID. period opcional: YYYY-MM-DD, YYYY-MM o YYYY/MM/DD, YYYY/MM',
