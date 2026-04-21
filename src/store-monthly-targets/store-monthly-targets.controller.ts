@@ -47,26 +47,6 @@ export class StoreMonthlyTargetsController {
     return this.storeMonthlyTargetsService.findAll();
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Obtener una meta mensual por ID' })
-  @ApiParam({
-    name: 'id',
-    description: 'ID de la meta mensual',
-    type: String,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Meta mensual encontrada.',
-    type: StoreMonthlyTarget,
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Meta mensual no encontrada.',
-  })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.storeMonthlyTargetsService.findOne(id);
-  }
-
   @Get(':storeID')
   @Get(':storeID/:period')
   @ApiOperation({
