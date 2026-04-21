@@ -15,6 +15,7 @@ import { StoreMonthlyTargetsService } from './store-monthly-targets.service';
 import { CreateStoreMonthlyTargetDto } from './dto/create-store-monthly-target.dto';
 import { UpdateStoreMonthlyTargetDto } from './dto/update-store-monthly-target.dto';
 import { StoreMonthlyTarget } from './entities/store-monthly-target.entity';
+import { UpsertStoreMonthlyTargetDto } from './dto/upsert-store-monthly-target.dto';
 
 @ApiTags('Metas Mensuales de Tienda')
 @Controller('store-monthly-targets')
@@ -66,18 +67,51 @@ export class StoreMonthlyTargetsController {
     return this.storeMonthlyTargetsService.findOne(id);
   }
 
-  @Get('store/:storeID/current')
+  @Get('store/:storeID/:period?')
   @ApiOperation({
-    summary: 'Obtener la meta mensual actual de una tienda por ID',
+    summary:
+      'Obtener la meta mensual de una tienda por ID. period opcional: YYYY-MM-DD, YYYY-MM o YYYY/MM/DD, YYYY/MM',
+  })
+  @ApiParam({ name: 'storeID', description: 'ID de la tienda', type: String })
+  @ApiParam({
+    name: 'period',
+    description:
+      'Periodo opcional. Si no se envía, se usa el mes actual. Formatos aceptados: YYYY-MM-DD, YYYY-MM, YYYY/MM/DD, YYYY/MM',
+    required: false,
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Meta mensual (0 si no existe).',
+  })
+  @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
+  getByStore(
+    @Param('storeID', ParseUUIDPipe) storeID: string,
+    @Param('period') period?: string,
+  ) {
+    return this.storeMonthlyTargetsService.getTargetByStoreAndPeriod(
+      storeID,
+      period,
+    );
+  }
+
+  @Post('store/:storeID/upsert')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Crear o actualizar (upsert) la meta mensual para la tienda en el periodo dado (por defecto mes actual).',
   })
   @ApiParam({ name: 'storeID', description: 'ID de la tienda', type: String })
   @ApiResponse({
     status: 200,
-    description: 'Meta mensual actual (0 si no existe).',
+    description: 'Meta creada o actualizada.',
+    type: StoreMonthlyTarget,
   })
-  @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  getCurrent(@Param('storeID', ParseUUIDPipe) storeID: string) {
-    return this.storeMonthlyTargetsService.getCurrentTargetByStore(storeID);
+  upsert(
+    @Param('storeID', ParseUUIDPipe) storeID: string,
+    @Body() upsertDto: UpsertStoreMonthlyTargetDto,
+  ) {
+    return this.storeMonthlyTargetsService.upsertByStore(storeID, upsertDto);
   }
 
   @Patch(':id')
