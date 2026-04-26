@@ -12,6 +12,7 @@ import {
 import { StoreTransferItem } from './entities/store-transfer-item.entity';
 import { CreateStoreTransferDto } from './dto/create-store-transfer.dto';
 import { AddTransferItemDto } from './dto/add-transfer-item.dto';
+import { ListTransfersFilterDto } from './dto/list-transfers-filter.dto';
 import { InventoryService } from '../inventory/inventory.service';
 import { InventoryMovementReason } from '../inventory/entities/inventory-movement.entity';
 
@@ -119,5 +120,39 @@ export class TransfersService {
         'destinationStore',
       ],
     });
+  }
+
+  async findAll(filters: ListTransfersFilterDto) {
+    const { originStoreID, destinationStoreID, status, page = 1, limit = 20 } = filters;
+
+    const query = this.transfersRepository
+      .createQueryBuilder('transfer')
+      .leftJoinAndSelect('transfer.originStore', 'originStore')
+      .leftJoinAndSelect('transfer.destinationStore', 'destinationStore')
+      .leftJoinAndSelect('transfer.items', 'items')
+      .leftJoinAndSelect('items.variation', 'variation')
+      .orderBy('transfer.createdAt', 'DESC');
+
+    if (originStoreID) {
+      query.andWhere('originStore.storeID = :originStoreID', { originStoreID });
+    }
+    if (destinationStoreID) {
+      query.andWhere('destinationStore.storeID = :destinationStoreID', { destinationStoreID });
+    }
+    if (status) {
+      query.andWhere('transfer.status = :status', { status });
+    }
+
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      lastPage: Math.ceil(total / limit),
+    };
   }
 }
