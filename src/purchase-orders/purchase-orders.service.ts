@@ -219,7 +219,6 @@ export class PurchaseOrdersService {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
         where: { purchaseOrderID: id },
-        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -228,6 +227,10 @@ export class PurchaseOrdersService {
           `Orden de compra con ID ${id} no encontrada`,
         );
       }
+
+      purchaseOrder.items = await manager.find(PurchaseOrderItem, {
+        where: { purchaseOrder: { purchaseOrderID: id } },
+      });
 
       if (dto.storeID) {
         const store = await manager.findOne(Store, {
@@ -261,6 +264,52 @@ export class PurchaseOrdersService {
         purchaseOrder.discount = dto.discount;
       }
 
+      if (dto.items) {
+        // Cargar items actuales para comparar
+        const existingItems = await manager.find(PurchaseOrderItem, {
+          where: { purchaseOrder: { purchaseOrderID: id } },
+          relations: ['variation'],
+        });
+
+        const itemsMap = new Map<string, PurchaseOrderItem>();
+        existingItems.forEach((item) => {
+          itemsMap.set(item.variation.variationID, item);
+        });
+
+        const updatedItems: PurchaseOrderItem[] = [];
+
+        for (const itemDto of dto.items) {
+          const existing = itemsMap.get(itemDto.variationID);
+
+          if (existing) {
+            // Actualizar datos de pedido, manteniendo lo recibido
+            existing.quantityRequested = itemDto.quantity;
+            existing.unitPrice = itemDto.unitPrice;
+            existing.subtotal = this.toMoney(itemDto.unitPrice * itemDto.quantity);
+            updatedItems.push(existing);
+            itemsMap.delete(itemDto.variationID); // Quitamos del mapa para no borrarlo
+          } else {
+            // Crear nuevo ítem
+            const newItem = manager.create(PurchaseOrderItem, {
+              purchaseOrder: { purchaseOrderID: id },
+              variation: { variationID: itemDto.variationID },
+              unitPrice: itemDto.unitPrice,
+              quantityRequested: itemDto.quantity,
+              quantityReceived: 0,
+              subtotal: this.toMoney(itemDto.unitPrice * itemDto.quantity),
+            });
+            updatedItems.push(newItem);
+          }
+        }
+
+        // Los que queden en itemsMap ya no están en el nuevo pedido, se eliminan
+        if (itemsMap.size > 0) {
+          await manager.remove(Array.from(itemsMap.values()));
+        }
+
+        purchaseOrder.items = await manager.save(updatedItems);
+      }
+
       const totals = this.calculateTotals(
         purchaseOrder.items,
         purchaseOrder.discount,
@@ -269,6 +318,10 @@ export class PurchaseOrdersService {
       purchaseOrder.netTotal = totals.net;
       purchaseOrder.tax = totals.tax;
       purchaseOrder.total = totals.total;
+      purchaseOrder.totalProducts = purchaseOrder.items.reduce(
+        (acc, item) => acc + item.quantityRequested,
+        0,
+      );
 
       await manager.save(purchaseOrder);
       return this.findOne(id);
@@ -282,7 +335,6 @@ export class PurchaseOrdersService {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
         where: { purchaseOrderID: id },
-        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -291,6 +343,19 @@ export class PurchaseOrdersService {
           `Orden de compra con ID ${id} no encontrada`,
         );
       }
+
+      // Cargar items y variaciones por separado
+      purchaseOrder.items = await manager.find(PurchaseOrderItem, {
+        where: { purchaseOrder: { purchaseOrderID: id } },
+        relations: ['variation'],
+      });
+
+      // Cargar tienda
+      const poWithStore = await manager.findOne(PurchaseOrder, {
+        where: { purchaseOrderID: id },
+        relations: ['store'],
+      });
+      purchaseOrder.store = poWithStore!.store;
 
       const previousStatus = purchaseOrder.paymentStatus;
       const nextStatus = dto.status;
@@ -329,7 +394,6 @@ export class PurchaseOrdersService {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
         where: { purchaseOrderID: id },
-        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -338,6 +402,11 @@ export class PurchaseOrdersService {
           `Orden de compra con ID ${id} no encontrada`,
         );
       }
+
+      purchaseOrder.items = await manager.find(PurchaseOrderItem, {
+        where: { purchaseOrder: { purchaseOrderID: id } },
+        relations: ['variation'],
+      });
 
       const itemsMap = new Map<string, PurchaseOrderItem>();
       for (const item of purchaseOrder.items) {

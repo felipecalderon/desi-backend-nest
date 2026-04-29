@@ -1,13 +1,30 @@
-import { Controller, Post, Body, Param, Get } from '@nestjs/common';
+import { Controller, Post, Body, Param, Get, Query } from '@nestjs/common';
 import { TransfersService } from './transfers.service';
 import { CreateStoreTransferDto } from './dto/create-store-transfer.dto';
 import { AddTransferItemDto } from './dto/add-transfer-item.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ListTransfersFilterDto } from './dto/list-transfers-filter.dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Transferencias entre Tiendas')
 @Controller('transfers')
 export class TransfersController {
   constructor(private readonly transfersService: TransfersService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Listar historial de transferencias',
+    description:
+      'Retorna todas las transferencias con filtros opcionales por tienda origen, destino, estado y paginación.',
+  })
+  @ApiQuery({ name: 'originStoreID', required: false, type: String })
+  @ApiQuery({ name: 'destinationStoreID', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'COMPLETED', 'CANCELLED'] })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiResponse({ status: 200, description: 'Listado de transferencias paginado.' })
+  findAll(@Query() filters: ListTransfersFilterDto) {
+    return this.transfersService.findAll(filters);
+  }
 
   @Post()
   @ApiOperation({
