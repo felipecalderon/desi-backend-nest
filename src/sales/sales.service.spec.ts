@@ -125,45 +125,42 @@ describe('SalesService', () => {
       };
 
       mockDataSource.transaction.mockImplementation(async (cb) => {
-        // Mock targetStore (Central)
         mockManager.findOne
           .mockResolvedValueOnce({
             storeID: 'store-central',
             isCentralStore: true,
           })
-          // Mock ProductVariation
           .mockResolvedValueOnce({
             variationID: 'var-1',
             stock: 100,
             sku: 'SKU-1',
+          })
+          .mockResolvedValueOnce({
+            storeID: 'store-central',
+            variationID: 'var-1',
+            stock: 95,
+          })
+          .mockResolvedValueOnce({
+            saleID: 'new-sale',
+            store: { storeID: 'store-central' },
+            saleProducts: [],
           });
 
-        mockManager.create
-          .mockReturnValueOnce({
-            saleID: 'new-sale',
-            storeID: 'store-central',
-            status: 'Pendiente',
-            total: 0,
-          })
-          .mockReturnValueOnce({ saleProductID: 'sp-1' }); // SaleProduct
-
-        mockManager.save.mockResolvedValue({ saleID: 'new-sale' });
+        mockManager.create.mockImplementation((entity, data) => data);
+        mockManager.save.mockImplementation(async (value) => value);
 
         return cb(mockManager);
       });
 
-      jest.spyOn(service, 'findOne').mockResolvedValue(mockSale as Sale);
-
-      await service.create({
+      const result = await service.create({
         storeID: 'store-central',
         paymentType: 'Efectivo',
         items: [{ variationID: 'var-1', quantity: 5, unitPrice: 200 }],
       });
 
       expect(mockDataSource.transaction).toHaveBeenCalled();
-      // Verificamos que se buscó la variation (deducción central)
-      // La primera llamada a findOne es Store, la segunda es Variation
-      expect(mockManager.findOne).toHaveBeenCalledTimes(2);
+      expect(mockManager.findOne).toHaveBeenCalledTimes(4);
+      expect(result.saleID).toBe('new-sale');
     });
 
     it('should create a sale from Associated Store and deduct from StoreProduct', async () => {
@@ -174,45 +171,42 @@ describe('SalesService', () => {
       };
 
       mockDataSource.transaction.mockImplementation(async (cb) => {
-        // Mock targetStore (Non-Central)
         mockManager.findOne
           .mockResolvedValueOnce({
             storeID: 'store-assoc',
             isCentralStore: false,
           })
-          // Mock StoreProduct
+          .mockResolvedValueOnce({
+            variationID: 'var-1',
+            stock: 50,
+            sku: 'SKU-1',
+          })
           .mockResolvedValueOnce({
             storeID: 'store-assoc',
             variationID: 'var-1',
-            quantity: 50,
+            stock: 40,
+          })
+          .mockResolvedValueOnce({
+            saleID: 'new-sale-2',
+            store: { storeID: 'store-assoc' },
+            saleProducts: [],
           });
 
-        mockManager.create
-          .mockReturnValueOnce({
-            saleID: 'new-sale-2',
-            storeID: 'store-assoc',
-            status: 'Pendiente',
-            total: 0,
-          })
-          .mockReturnValueOnce({ saleProductID: 'sp-2' }); // SaleProduct
-
-        mockManager.save.mockResolvedValue({ saleID: 'new-sale-2' });
+        mockManager.create.mockImplementation((entity, data) => data);
+        mockManager.save.mockImplementation(async (value) => value);
 
         return cb(mockManager);
       });
 
-      jest.spyOn(service, 'findOne').mockResolvedValue(mockSale as Sale);
-
-      await service.create({
+      const result = await service.create({
         storeID: 'store-assoc',
         paymentType: 'Credito',
         items: [{ variationID: 'var-1', quantity: 10, unitPrice: 300 }],
       });
 
       expect(mockDataSource.transaction).toHaveBeenCalled();
-      // Verificamos que se buscó StoreProduct (deducción tienda)
-      // Primera llamada Store, segunda llamada StoreProduct
-      expect(mockManager.findOne).toHaveBeenCalledTimes(2);
+      expect(mockManager.findOne).toHaveBeenCalledTimes(4);
+      expect(result.saleID).toBe('new-sale-2');
     });
   });
 });
