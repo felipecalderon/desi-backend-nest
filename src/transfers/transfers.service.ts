@@ -123,7 +123,13 @@ export class TransfersService {
   }
 
   async findAll(filters: ListTransfersFilterDto) {
-    const { originStoreID, destinationStoreID, status, page = 1, limit = 20 } = filters;
+    const {
+      originStoreID,
+      destinationStoreID,
+      status,
+      page = 1,
+      limit = 20,
+    } = filters;
 
     const query = this.transfersRepository
       .createQueryBuilder('transfer')
@@ -137,7 +143,9 @@ export class TransfersService {
       query.andWhere('originStore.storeID = :originStoreID', { originStoreID });
     }
     if (destinationStoreID) {
-      query.andWhere('destinationStore.storeID = :destinationStoreID', { destinationStoreID });
+      query.andWhere('destinationStore.storeID = :destinationStoreID', {
+        destinationStoreID,
+      });
     }
     if (status) {
       query.andWhere('transfer.status = :status', { status });

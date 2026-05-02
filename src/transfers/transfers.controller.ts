@@ -3,7 +3,13 @@ import { TransfersService } from './transfers.service';
 import { CreateStoreTransferDto } from './dto/create-store-transfer.dto';
 import { AddTransferItemDto } from './dto/add-transfer-item.dto';
 import { ListTransfersFilterDto } from './dto/list-transfers-filter.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from '@nestjs/swagger';
 
 @ApiTags('Transferencias entre Tiendas')
 @Controller('transfers')
@@ -18,10 +24,17 @@ export class TransfersController {
   })
   @ApiQuery({ name: 'originStoreID', required: false, type: String })
   @ApiQuery({ name: 'destinationStoreID', required: false, type: String })
-  @ApiQuery({ name: 'status', required: false, enum: ['PENDING', 'COMPLETED', 'CANCELLED'] })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['PENDING', 'COMPLETED', 'CANCELLED'],
+  })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: 'Listado de transferencias paginado.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de transferencias paginado.',
+  })
   findAll(@Query() filters: ListTransfersFilterDto) {
     return this.transfersService.findAll(filters);
   }
