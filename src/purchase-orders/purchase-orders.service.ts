@@ -285,7 +285,9 @@ export class PurchaseOrdersService {
             // Actualizar datos de pedido, manteniendo lo recibido
             existing.quantityRequested = itemDto.quantity;
             existing.unitPrice = itemDto.unitPrice;
-            existing.subtotal = this.toMoney(itemDto.unitPrice * itemDto.quantity);
+            existing.subtotal = this.toMoney(
+              itemDto.unitPrice * itemDto.quantity,
+            );
             updatedItems.push(existing);
             itemsMap.delete(itemDto.variationID); // Quitamos del mapa para no borrarlo
           } else {

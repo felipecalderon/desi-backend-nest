@@ -17,6 +17,7 @@ describe('OfferService', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -61,5 +62,40 @@ describe('OfferService', () => {
 
     expect(result?.offerID).toBe('offer-best');
     expect(result?.priority).toBeGreaterThan(0);
+  });
+
+  it('lists all special offers with product context', async () => {
+    const getMany = jest.fn().mockResolvedValue([
+      {
+        offerID: 'offer-1',
+        description: 'Promo',
+        storeProduct: {
+          storeProductID: 'sp-1',
+          store: { storeID: 'store-1' },
+          variation: {
+            variationID: 'variation-1',
+            product: { productID: 'product-1' },
+          },
+        },
+      },
+    ]);
+    const queryBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany,
+    };
+    repository.createQueryBuilder.mockReturnValue(queryBuilder as never);
+
+    const result = await service.getSpecialOffers();
+
+    expect(mockRepository.createQueryBuilder).toHaveBeenCalledWith('offer');
+    expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+      'offer.storeProduct',
+      'storeProduct',
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].storeProduct.store.storeID).toBe('store-1');
   });
 });

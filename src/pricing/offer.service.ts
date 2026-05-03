@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
+import {
+  Repository,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  IsNull,
+  SelectQueryBuilder,
+} from 'typeorm';
 import {
   SpecialOffer,
   DiscountType,
@@ -33,8 +39,7 @@ export class OfferService {
       endDate: endDate ? new Date(endDate) : undefined,
       storeProduct: { storeProductID } as SpecialOffer['storeProduct'],
     });
-    const savedOffer = await this.specialOfferRepository.save(offer);
-    return Array.isArray(savedOffer) ? savedOffer[0] : savedOffer;
+    return this.specialOfferRepository.save(offer);
   }
 
   async updateSpecialOffer(
@@ -64,6 +69,25 @@ export class OfferService {
         : {}),
     });
     return this.specialOfferRepository.save(offer);
+  }
+
+  async getSpecialOffers(storeProductID?: string): Promise<SpecialOffer[]> {
+    const query: SelectQueryBuilder<SpecialOffer> = this.specialOfferRepository
+      .createQueryBuilder('offer')
+      .leftJoinAndSelect('offer.storeProduct', 'storeProduct')
+      .leftJoinAndSelect('storeProduct.store', 'store')
+      .leftJoinAndSelect('storeProduct.variation', 'variation')
+      .leftJoinAndSelect('variation.product', 'product')
+      .orderBy('offer.startDate', 'DESC')
+      .addOrderBy('offer.createdAt', 'DESC');
+
+    if (storeProductID) {
+      query.andWhere('storeProduct.storeProductID = :storeProductID', {
+        storeProductID,
+      });
+    }
+
+    return query.getMany();
   }
 
   async getActiveOffers(

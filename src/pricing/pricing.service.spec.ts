@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { PricingService } from './pricing.service';
 import { PriceHistory } from './entities/price-history.entity';
 import { OfferService } from './offer.service';
@@ -19,6 +19,7 @@ describe('PricingService', () => {
   let offerService: { getBestOffer: jest.Mock };
   let userDiscountValidator: { validate: jest.Mock };
   let marginValidator: { validate: jest.Mock };
+  let priceHistoryRepository: { createQueryBuilder: jest.Mock };
 
   beforeEach(async () => {
     dataSource = {
@@ -35,13 +36,16 @@ describe('PricingService', () => {
     marginValidator = {
       validate: jest.fn(),
     };
+    priceHistoryRepository = {
+      createQueryBuilder: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PricingService,
         {
           provide: getRepositoryToken(PriceHistory),
-          useValue: {} as Repository<PriceHistory>,
+          useValue: priceHistoryRepository,
         },
         {
           provide: DataSource,
@@ -183,5 +187,47 @@ describe('PricingService', () => {
     expect(result.basePrice).toBe(120);
     expect(result.finalPrice).toBe(120);
     expect(marginValidator.validate).toHaveBeenCalledWith(50, 120);
+  });
+
+  it('lists price history with product and store context', async () => {
+    const getMany = jest.fn().mockResolvedValue([
+      {
+        historyID: 'history-1',
+        storeProduct: {
+          storeProductID: 'sp-1',
+          store: { storeID: 'store-1' },
+          variation: {
+            variationID: 'variation-1',
+            product: { productID: 'product-1' },
+          },
+        },
+      },
+    ]);
+    const queryBuilder = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany,
+    };
+    priceHistoryRepository.createQueryBuilder.mockReturnValue(
+      queryBuilder as never,
+    );
+
+    const result = await service.getPriceHistoryList({
+      storeID: 'store-1',
+      variationID: 'variation-1',
+    });
+
+    expect(priceHistoryRepository.createQueryBuilder).toHaveBeenCalledWith(
+      'history',
+    );
+    expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+      'history.storeProduct',
+      'storeProduct',
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].storeProduct.variation.product.productID).toBe(
+      'product-1',
+    );
   });
 });

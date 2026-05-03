@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, SelectQueryBuilder } from 'typeorm';
 import { PriceHistory, PriceType } from './entities/price-history.entity';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
@@ -17,6 +17,7 @@ import {
 import { OfferService } from './offer.service';
 import { MarginValidator } from './validators/margin.validator';
 import { UserDiscountValidator } from './validators/user-discount.validator';
+import { PricingListQueryDto } from './dto/pricing-list.query.dto';
 
 @Injectable()
 export class PricingService {
@@ -78,15 +79,39 @@ export class PricingService {
   }
 
   async getPriceHistory(storeID: string, variationID: string) {
-    return this.priceHistoryRepository.find({
-      where: {
-        storeProduct: {
-          store: { storeID },
-          variation: { variationID },
-        },
-      },
-      order: { effectiveDate: 'DESC' },
-    });
+    return this.getPriceHistoryList({ storeID, variationID });
+  }
+
+  async getPriceHistoryList(
+    filters: PricingListQueryDto = {},
+  ): Promise<PriceHistory[]> {
+    const query: SelectQueryBuilder<PriceHistory> = this.priceHistoryRepository
+      .createQueryBuilder('history')
+      .leftJoinAndSelect('history.storeProduct', 'storeProduct')
+      .leftJoinAndSelect('storeProduct.store', 'store')
+      .leftJoinAndSelect('storeProduct.variation', 'variation')
+      .leftJoinAndSelect('variation.product', 'product')
+      .orderBy('history.effectiveDate', 'DESC');
+
+    if (filters.storeProductID) {
+      query.andWhere('storeProduct.storeProductID = :storeProductID', {
+        storeProductID: filters.storeProductID,
+      });
+    }
+
+    if (filters.storeID) {
+      query.andWhere('store.storeID = :storeID', {
+        storeID: filters.storeID,
+      });
+    }
+
+    if (filters.variationID) {
+      query.andWhere('variation.variationID = :variationID', {
+        variationID: filters.variationID,
+      });
+    }
+
+    return query.getMany();
   }
 
   async calculatePrice(input: PricingInput): Promise<PricingResult> {

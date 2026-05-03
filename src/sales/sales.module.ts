@@ -11,14 +11,14 @@ import { InventoryMovement } from '../inventory/entities/inventory-movement.enti
 
 @Module({
   imports: [
-      TypeOrmModule.forFeature([
-        Sale,
-        SaleProduct,
-        ProductVariation,
-        Store,
-        StoreProduct,
-        InventoryMovement,
-      ]),
+    TypeOrmModule.forFeature([
+      Sale,
+      SaleProduct,
+      ProductVariation,
+      Store,
+      StoreProduct,
+      InventoryMovement,
+    ]),
   ],
   controllers: [SalesController],
   providers: [SalesService],

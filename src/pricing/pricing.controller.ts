@@ -12,8 +12,10 @@ import { OfferService } from './offer.service';
 import { UpdatePriceDto } from './dto/update-price.dto';
 import { CreateSpecialOfferDto } from './dto/create-special-offer.dto';
 import { UpdateSpecialOfferDto } from './dto/update-special-offer.dto';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
+import { PricingListQueryDto } from './dto/pricing-list.query.dto';
+import { SpecialOfferListQueryDto } from './dto/special-offer-list.query.dto';
 
 @ApiTags('Precios de productos')
 @Controller('pricing')
@@ -31,13 +33,38 @@ export class PricingController {
 
   @Get('history')
   @ApiOperation({
-    summary: 'Obtener historial de precios de un producto de tienda',
+    summary: 'Obtener historial de precios completo o filtrado',
   })
-  getPriceHistory(
-    @Query('storeID', ParseUUIDPipe) storeID: string,
-    @Query('variationID', ParseUUIDPipe) variationID: string,
-  ) {
-    return this.pricingService.getPriceHistory(storeID, variationID);
+  @ApiQuery({
+    name: 'storeProductID',
+    required: false,
+    description: 'Filtra el historial por producto de tienda',
+  })
+  @ApiQuery({
+    name: 'storeID',
+    required: false,
+    description: 'Filtra el historial por tienda',
+  })
+  @ApiQuery({
+    name: 'variationID',
+    required: false,
+    description: 'Filtra el historial por variación',
+  })
+  getPriceHistory(@Query() query: PricingListQueryDto) {
+    return this.pricingService.getPriceHistoryList(query);
+  }
+
+  @Get('offers')
+  @ApiOperation({
+    summary: 'Listar todas las ofertas especiales o filtrar por producto',
+  })
+  @ApiQuery({
+    name: 'storeProductID',
+    required: false,
+    description: 'Filtra las ofertas por producto de tienda',
+  })
+  getOffers(@Query() query: SpecialOfferListQueryDto) {
+    return this.offerService.getSpecialOffers(query.storeProductID);
   }
 
   @Post('offers')
