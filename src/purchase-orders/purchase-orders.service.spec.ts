@@ -28,7 +28,7 @@ describe('PurchaseOrdersService', () => {
 
   const mockPurchaseOrder: Partial<PurchaseOrder> = {
     purchaseOrderID: 'po-uuid-1',
-    storeID: 'store-uuid-1',
+    store: { storeID: 'store-uuid-1' } as any,
     folio: 'abc123',
     paymentStatus: 'Pendiente',
     subtotal: 1000,
@@ -118,12 +118,17 @@ describe('PurchaseOrdersService', () => {
       mockDataSource.transaction.mockImplementation(async (cb) => {
         mockManager.findOne
           .mockResolvedValueOnce({ storeID: 'store-uuid-1' }) // Store
-          .mockResolvedValueOnce({ variationID: 'var-1', sku: 'SKU-1' }); // Variation
+          .mockResolvedValueOnce({ variationID: 'var-1', sku: 'SKU-1' }) // Variation
+          .mockResolvedValueOnce({
+            purchaseOrderID: 'new-po',
+            store: { storeID: 'store-uuid-1' },
+            items: [],
+          });
 
         mockManager.create
           .mockReturnValueOnce({
             purchaseOrderID: 'new-po',
-            storeID: 'store-uuid-1',
+            store: { storeID: 'store-uuid-1' },
           })
           .mockReturnValueOnce({ purchaseOrderItemID: 'poi-1' });
 
@@ -151,6 +156,7 @@ describe('PurchaseOrdersService', () => {
         findOne: jest
           .fn()
           .mockResolvedValue({ ...mockPurchaseOrder, items: [] }),
+        find: jest.fn().mockResolvedValue([]),
         save: jest.fn().mockResolvedValue(mockPurchaseOrder),
       };
 
@@ -173,6 +179,7 @@ describe('PurchaseOrdersService', () => {
         findOne: jest
           .fn()
           .mockResolvedValue({ ...mockPurchaseOrder, items: [] }),
+        find: jest.fn().mockResolvedValue([]),
         save: jest.fn().mockResolvedValue(mockPurchaseOrder),
       };
 

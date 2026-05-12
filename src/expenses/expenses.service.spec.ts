@@ -8,6 +8,16 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 describe('ExpensesService', () => {
   let service: ExpensesService;
   let expenseRepository: Repository<Expense>;
+  let expenseSummaryQueryBuilder: {
+    select: jest.Mock;
+    addSelect: jest.Mock;
+    where: jest.Mock;
+    groupBy: jest.Mock;
+    addGroupBy: jest.Mock;
+    orderBy: jest.Mock;
+    addOrderBy: jest.Mock;
+    getRawMany: jest.Mock;
+  };
 
   const mockExpenseRepository = {
     find: jest.fn(),
@@ -15,6 +25,7 @@ describe('ExpensesService', () => {
     create: jest.fn(),
     save: jest.fn(),
     remove: jest.fn(),
+    createQueryBuilder: jest.fn(),
   };
 
   const mockExpense: Partial<Expense> = {
@@ -23,13 +34,37 @@ describe('ExpensesService', () => {
     deductibleDate: new Date('2023-10-27T00:00:00Z'),
     amount: 1500.5,
     type: ExpenseType.ADMINISTRATIVE,
-    storeID: 'store-uuid-1',
+    store: { storeID: 'store-uuid-1' } as any,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
+  const buildSummaryQueryBuilder = () => {
+    const qb = {
+      select: jest.fn().mockReturnThis(),
+      addSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      groupBy: jest.fn().mockReturnThis(),
+      addGroupBy: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn(),
+    };
+
+    return qb;
+  };
+
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-05-11T12:00:00Z'));
+  });
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    expenseSummaryQueryBuilder = buildSummaryQueryBuilder();
+    mockExpenseRepository.createQueryBuilder.mockReturnValue(
+      expenseSummaryQueryBuilder,
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -45,6 +80,10 @@ describe('ExpensesService', () => {
     expenseRepository = module.get<Repository<Expense>>(
       getRepositoryToken(Expense),
     );
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
   });
 
   it('should be defined', () => {
@@ -104,6 +143,103 @@ describe('ExpensesService', () => {
       expect(mockExpenseRepository.find).toHaveBeenCalledWith({
         relations: ['store'],
       });
+    });
+  });
+
+  describe('getSummary', () => {
+    it('should return a month by month summary for the current year', async () => {
+      expenseSummaryQueryBuilder.getRawMany.mockResolvedValue([
+        { month: 1, type: ExpenseType.ADMINISTRATIVE, total: '100.50' },
+        { month: 1, type: ExpenseType.OPERATIONAL, total: '50.25' },
+        { month: 5, type: ExpenseType.FINANCIAL, total: '30' },
+      ]);
+
+      const result = await service.getSummary({});
+
+      expect(mockExpenseRepository.createQueryBuilder).toHaveBeenCalledWith(
+        'expense',
+      );
+      expect(expenseSummaryQueryBuilder.where).toHaveBeenCalledWith(
+        'expense.deductibleDate >= :start AND expense.deductibleDate < :end',
+        expect.objectContaining({
+          start: '2026-01-01T00:00:00.000Z',
+          end: '2027-01-01T00:00:00.000Z',
+        }),
+      );
+      expect(expenseSummaryQueryBuilder.groupBy).toHaveBeenCalledWith('month');
+      expect(expenseSummaryQueryBuilder.addGroupBy).toHaveBeenCalledWith(
+        'expense.type',
+      );
+      expect(expenseSummaryQueryBuilder.orderBy).toHaveBeenCalledWith(
+        'month',
+        'ASC',
+      );
+      expect(expenseSummaryQueryBuilder.addOrderBy).toHaveBeenCalledWith(
+        'expense.type',
+        'ASC',
+      );
+
+      expect(result.year).toBe(2026);
+      expect(result.months).toHaveLength(12);
+      expect(result.months[0]).toEqual({
+        month: 1,
+        label: 'Enero',
+        total: 150.75,
+        byType: [
+          { type: ExpenseType.FINANCIAL, total: 0 },
+          { type: ExpenseType.OPERATIONAL, total: 50.25 },
+          { type: ExpenseType.ADMINISTRATIVE, total: 100.5 },
+        ],
+      });
+      expect(result.months[4]).toEqual({
+        month: 5,
+        label: 'Mayo',
+        total: 30,
+        byType: [
+          { type: ExpenseType.FINANCIAL, total: 30 },
+          { type: ExpenseType.OPERATIONAL, total: 0 },
+          { type: ExpenseType.ADMINISTRATIVE, total: 0 },
+        ],
+      });
+      expect(result.totals).toEqual({
+        total: 180.75,
+        byType: [
+          { type: ExpenseType.FINANCIAL, total: 30 },
+          { type: ExpenseType.OPERATIONAL, total: 50.25 },
+          { type: ExpenseType.ADMINISTRATIVE, total: 100.5 },
+        ],
+      });
+    });
+
+    it('should return zeroed months when there are no expenses', async () => {
+      expenseSummaryQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      const result = await service.getSummary({});
+
+      expect(result.months).toHaveLength(12);
+      expect(result.totals).toEqual({
+        total: 0,
+        byType: [
+          { type: ExpenseType.FINANCIAL, total: 0 },
+          { type: ExpenseType.OPERATIONAL, total: 0 },
+          { type: ExpenseType.ADMINISTRATIVE, total: 0 },
+        ],
+      });
+    });
+
+    it('should include storeId in the filter when provided', async () => {
+      expenseSummaryQueryBuilder.getRawMany.mockResolvedValue([]);
+
+      await service.getSummary({
+        storeId: '123e4567-e89b-12d3-a456-426614174000',
+      });
+
+      expect(expenseSummaryQueryBuilder.where).toHaveBeenCalledWith(
+        'expense.deductibleDate >= :start AND expense.deductibleDate < :end AND expense.storeID = :storeId',
+        expect.objectContaining({
+          storeId: '123e4567-e89b-12d3-a456-426614174000',
+        }),
+      );
     });
   });
 

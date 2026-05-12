@@ -5,7 +5,7 @@ import { ReportsService } from './reports.service';
 describe('ReportsController', () => {
   let controller: ReportsController;
   const mockService = {
-    getSalesReport: jest.fn().mockResolvedValue({ foo: 'bar' }),
+    getIncomeStatement: jest.fn().mockResolvedValue({ foo: 'bar' }),
   };
 
   beforeEach(async () => {
@@ -17,8 +17,8 @@ describe('ReportsController', () => {
     controller = module.get<ReportsController>(ReportsController);
   });
 
-  it('should return data from service', async () => {
-    expect(await controller.salesReport({} as any)).toEqual({ foo: 'bar' });
-    expect(mockService.getSalesReport).toHaveBeenCalledWith({} as any);
+  it('delegates to the income statement service', async () => {
+    expect(await controller.incomeStatement({} as any)).toEqual({ foo: 'bar' });
+    expect(mockService.getIncomeStatement).toHaveBeenCalledWith({} as any);
   });
 });

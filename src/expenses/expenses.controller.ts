@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Query,
   Post,
   Body,
   Patch,
@@ -15,6 +16,8 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { Expense } from './entities/expense.entity';
 import { CustomMessage } from '../common/decorators/response-message';
+import { ExpenseSummaryDto } from './dto/expense-summary.dto';
+import { ExpenseSummaryQueryDto } from './dto/expense-summary-query.dto';
 
 @ApiTags('Gestión de Gastos')
 @Controller('expenses')
@@ -52,6 +55,25 @@ export class ExpensesController {
   })
   findAll() {
     return this.expensesService.findAll();
+  }
+
+  @Get('summary')
+  @ApiOperation({
+    summary: 'Resumen de gastos',
+    description:
+      'Devuelve el total general de gastos y el desglose acumulado por tipo de gasto.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Resumen de gastos recuperado con éxito.',
+    type: ExpenseSummaryDto,
+  })
+  async summary(
+    @Query() query: ExpenseSummaryQueryDto,
+  ): Promise<ExpenseSummaryDto> {
+    const summary: ExpenseSummaryDto =
+      await this.expensesService.getSummary(query);
+    return summary;
   }
 
   @Get(':id')

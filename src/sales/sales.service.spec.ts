@@ -28,7 +28,7 @@ describe('SalesService', () => {
 
   const mockSale: Partial<Sale> = {
     saleID: 'sale-uuid-1',
-    storeID: 'store-uuid-1',
+    store: { storeID: 'store-uuid-1' } as any,
     paymentType: 'Efectivo',
     status: 'Pendiente',
     total: 1000,
@@ -127,7 +127,7 @@ describe('SalesService', () => {
       mockDataSource.transaction.mockImplementation(async (cb) => {
         mockManager.findOne
           .mockResolvedValueOnce({
-            storeID: 'store-central',
+            store: { storeID: 'store-central' },
             isCentralStore: true,
           })
           .mockResolvedValueOnce({
@@ -136,7 +136,7 @@ describe('SalesService', () => {
             sku: 'SKU-1',
           })
           .mockResolvedValueOnce({
-            storeID: 'store-central',
+            store: { storeID: 'store-central' },
             variationID: 'var-1',
             stock: 95,
           })
@@ -173,7 +173,7 @@ describe('SalesService', () => {
       mockDataSource.transaction.mockImplementation(async (cb) => {
         mockManager.findOne
           .mockResolvedValueOnce({
-            storeID: 'store-assoc',
+            store: { storeID: 'store-assoc' },
             isCentralStore: false,
           })
           .mockResolvedValueOnce({
@@ -182,7 +182,7 @@ describe('SalesService', () => {
             sku: 'SKU-1',
           })
           .mockResolvedValueOnce({
-            storeID: 'store-assoc',
+            store: { storeID: 'store-assoc' },
             variationID: 'var-1',
             stock: 40,
           })
