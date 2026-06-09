@@ -1,3 +1,4 @@
+import { ExpenseType } from '../expenses/entities/expense.entity';
 import { ReportsService } from './reports.service';
 
 type BuilderState = {
@@ -43,6 +44,15 @@ function createRepositoryMock(
           state.groupByValue = value;
           return this;
         },
+        addGroupBy() {
+          return this;
+        },
+        orderBy() {
+          return this;
+        },
+        addOrderBy() {
+          return this;
+        },
         getRawMany: async () => rowsByAlias[alias] ?? [],
       };
 
@@ -77,7 +87,10 @@ describe('ReportsService', () => {
       purchaseOrder: [{ month: '1', total: '20.00' }],
     });
     const expensesRepo = createRepositoryMock({
-      expense: [{ month: '3', total: '10.00' }],
+      expense: [
+        { month: '3', type: ExpenseType.OPERATIONAL, total: '6.00' },
+        { month: '3', type: ExpenseType.ADMINISTRATIVE, total: '4.00' },
+      ],
     });
 
     const service = new ReportsService(
@@ -96,6 +109,11 @@ describe('ReportsService', () => {
       salesIncome: 100.5,
       purchaseOrdersIncome: 20,
       expenses: 0,
+      expenseDetail: [
+        { type: ExpenseType.FINANCIAL, total: 0 },
+        { type: ExpenseType.OPERATIONAL, total: 0 },
+        { type: ExpenseType.ADMINISTRATIVE, total: 0 },
+      ],
       net: 120.5,
     });
     expect(result.months[1]).toMatchObject({
@@ -110,6 +128,11 @@ describe('ReportsService', () => {
       salesIncome: 75.25,
       purchaseOrdersIncome: 0,
       expenses: 10,
+      expenseDetail: [
+        { type: ExpenseType.FINANCIAL, total: 0 },
+        { type: ExpenseType.OPERATIONAL, total: 6 },
+        { type: ExpenseType.ADMINISTRATIVE, total: 4 },
+      ],
       net: 65.25,
     });
     expect(result.totals).toEqual({
@@ -223,8 +246,40 @@ describe('ReportsService', () => {
       as: 'month',
     });
     expect(expensesRepo.builders[0].selects[1]).toEqual({
+      expr: 'expense.type',
+      as: 'type',
+    });
+    expect(expensesRepo.builders[0].selects[2]).toEqual({
       expr: 'COALESCE(SUM(expense.amount), 0)',
       as: 'total',
     });
+    expect(expensesRepo.builders[0].groupByValue).toBe('month');
+  });
+
+  it('aggregates expense detail by month and type', async () => {
+    const salesRepo = createRepositoryMock({ sale: [] });
+    const purchaseOrdersRepo = createRepositoryMock({ purchaseOrder: [] });
+    const expensesRepo = createRepositoryMock({
+      expense: [
+        { month: '1', type: ExpenseType.FINANCIAL, total: '12.50' },
+        { month: '1', type: ExpenseType.FINANCIAL, total: '2.50' },
+        { month: '1', type: ExpenseType.OPERATIONAL, total: '5.00' },
+      ],
+    });
+
+    const service = new ReportsService(
+      salesRepo as any,
+      purchaseOrdersRepo as any,
+      expensesRepo as any,
+    );
+
+    const result = await service.getIncomeStatement({ year: 2026 } as any);
+
+    expect(result.months[0].expenses).toBe(20);
+    expect(result.months[0].expenseDetail).toEqual([
+      { type: ExpenseType.FINANCIAL, total: 15 },
+      { type: ExpenseType.OPERATIONAL, total: 5 },
+      { type: ExpenseType.ADMINISTRATIVE, total: 0 },
+    ]);
   });
 });

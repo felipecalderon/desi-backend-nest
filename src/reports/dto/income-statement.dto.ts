@@ -1,4 +1,20 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { ExpenseType } from '../../expenses/entities/expense.entity';
+
+export class IncomeStatementExpenseDetailDto {
+  @ApiProperty({
+    description: 'Tipo de gasto',
+    enum: ExpenseType,
+    example: ExpenseType.ADMINISTRATIVE,
+  })
+  type!: ExpenseType;
+
+  @ApiProperty({
+    description: 'Total acumulado para este tipo de gasto en el mes',
+    example: 15000,
+  })
+  total!: number;
+}
 
 export class IncomeStatementMonthDto {
   @ApiProperty({ description: 'Número de mes del 1 al 12', example: 1 })
@@ -21,6 +37,12 @@ export class IncomeStatementMonthDto {
 
   @ApiProperty({ description: 'Egresos por gastos', example: 35000 })
   expenses!: number;
+
+  @ApiProperty({
+    type: [IncomeStatementExpenseDetailDto],
+    description: 'Detalle de gastos del mes por tipo de gasto',
+  })
+  expenseDetail!: IncomeStatementExpenseDetailDto[];
 
   @ApiProperty({ description: 'Resultado neto del mes', example: 132000 })
   net!: number;
