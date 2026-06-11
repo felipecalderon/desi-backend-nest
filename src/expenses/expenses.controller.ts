@@ -18,13 +18,26 @@ import { Expense } from './entities/expense.entity';
 import { CustomMessage } from '../common/decorators/response-message';
 import { ExpenseSummaryDto } from './dto/expense-summary.dto';
 import { ExpenseSummaryQueryDto } from './dto/expense-summary-query.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/permissions/permission.enum';
+import { StoreScoped } from '../auth/decorators/store-scope.decorator';
 
 @ApiTags('Gestión de Gastos')
+@Roles(
+  UserRole.ADMIN,
+  UserRole.STORE_MANAGER,
+  UserRole.CONSIGNADO,
+  UserRole.TERCERO,
+)
 @Controller('expenses')
 export class ExpensesController {
   constructor(private readonly expensesService: ExpensesService) {}
 
   @Post()
+  @RequirePermissions(Permission.EXPENSES_MANAGE)
+  @StoreScoped()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({
     summary: 'Registrar un nuevo gasto',
@@ -42,6 +55,8 @@ export class ExpensesController {
   }
 
   @Get()
+  @RequirePermissions(Permission.EXPENSES_VIEW)
+  @StoreScoped()
   @CustomMessage('Lista de gastos obtenida exitosamente')
   @ApiOperation({
     summary: 'Consultar todos los gastos',
@@ -53,11 +68,13 @@ export class ExpensesController {
     description: 'Lista de todos los gastos recuperada con éxito.',
     type: [Expense],
   })
-  findAll() {
-    return this.expensesService.findAll();
+  findAll(@Query('storeID') storeID: string) {
+    return this.expensesService.findAll(storeID);
   }
 
   @Get('summary')
+  @RequirePermissions(Permission.EXPENSES_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Resumen de gastos',
     description:
@@ -77,6 +94,8 @@ export class ExpensesController {
   }
 
   @Get(':id')
+  @RequirePermissions(Permission.EXPENSES_VIEW)
+  @StoreScoped({ resource: 'expense' })
   @CustomMessage('Gasto encontrado exitosamente')
   @ApiOperation({
     summary: 'Consultar un gasto por su ID',
@@ -102,6 +121,8 @@ export class ExpensesController {
   }
 
   @Patch(':id')
+  @RequirePermissions(Permission.EXPENSES_MANAGE)
+  @StoreScoped({ resource: 'expense' })
   @ApiOperation({
     summary: 'Actualizar la información de un gasto',
     description:
@@ -126,6 +147,8 @@ export class ExpensesController {
   }
 
   @Delete(':id')
+  @RequirePermissions(Permission.EXPENSES_MANAGE)
+  @StoreScoped({ resource: 'expense' })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Eliminar un registro de gasto',

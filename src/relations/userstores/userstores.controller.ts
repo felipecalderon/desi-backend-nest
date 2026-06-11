@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Patch,
+} from '@nestjs/common';
 import { UserstoresService } from './userstores.service';
 import { CreateUserstoreDto } from './dto/create-userstore.dto';
+import { UpdateUserstoreDto } from './dto/update-userstore.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserStore } from './entities/userstore.entity';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../users/entities/user.entity';
+import { RequirePermissions } from '../../auth/decorators/permissions.decorator';
+import { Permission } from '../../auth/permissions/permission.enum';
+import { StoreScoped } from '../../auth/decorators/store-scope.decorator';
 
 @ApiTags('Usuarios de las Tiendas')
 @Controller('userstores')
@@ -10,6 +24,8 @@ export class UserstoresController {
   constructor(private readonly userstoresService: UserstoresService) {}
 
   @Post()
+  @RequirePermissions(Permission.STORE_USERS_MANAGE)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Asignar un usuario a una tienda',
     description:
@@ -26,6 +42,7 @@ export class UserstoresController {
   }
 
   @Get()
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Obtener todas las relaciones usuario-tienda',
     description:
@@ -41,6 +58,7 @@ export class UserstoresController {
   }
 
   @Get(':id')
+  @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Obtener tiendas de un usuario',
     description: 'Retorna todas las tiendas a las que un usuario tiene acceso.',
@@ -60,7 +78,22 @@ export class UserstoresController {
     return this.userstoresService.findStoresByUserId(id);
   }
 
+  @Patch(':id')
+  @RequirePermissions(Permission.STORE_USERS_MANAGE)
+  @StoreScoped({ resource: 'userStore' })
+  @ApiOperation({
+    summary: 'Actualizar rol contextual de un usuario en una tienda',
+  })
+  update(
+    @Param('id') id: string,
+    @Body() updateUserstoreDto: UpdateUserstoreDto,
+  ) {
+    return this.userstoresService.update(id, updateUserstoreDto);
+  }
+
   @Delete(':id')
+  @RequirePermissions(Permission.STORE_USERS_MANAGE)
+  @StoreScoped({ resource: 'userStore' })
   @ApiOperation({
     summary: 'Eliminar asignación usuario-tienda',
     description:

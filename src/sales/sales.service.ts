@@ -129,8 +129,9 @@ export class SalesService {
     });
   }
 
-  findAll(): Promise<Sale[]> {
+  findAll(storeID?: string): Promise<Sale[]> {
     return this.saleRepository.find({
+      where: storeID ? { store: { storeID } } : undefined,
       relations: ['store', 'saleProducts', 'saleProducts.variation'],
       order: { createdAt: 'DESC' },
     });

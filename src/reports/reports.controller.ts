@@ -4,13 +4,26 @@ import { ReportsService } from './reports.service';
 import { IncomeStatementQueryDto } from './dto/income-statement-query.dto';
 import { IncomeStatementDto } from './dto/income-statement.dto';
 import { ReportsSaleFilterDto } from './dto/report-salesFilter.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/permissions/permission.enum';
+import { StoreScoped } from '../auth/decorators/store-scope.decorator';
 
 @Controller('reports')
 @ApiTags('Reportes')
+@Roles(
+  UserRole.ADMIN,
+  UserRole.STORE_MANAGER,
+  UserRole.CONSIGNADO,
+  UserRole.TERCERO,
+)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('income-statement')
+  @RequirePermissions(Permission.REPORTS_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Estado de resultados mensual',
     description:
@@ -37,6 +50,8 @@ export class ReportsController {
   }
 
   @Get('sales')
+  @RequirePermissions(Permission.SALES_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Reporte de ventas',
     description:

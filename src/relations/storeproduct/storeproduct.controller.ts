@@ -20,6 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { StoreProduct } from './entities/storeproduct.entity';
 import { Product } from '../../products/entities/product.entity';
+import { RequirePermissions } from '../../auth/decorators/permissions.decorator';
+import { Permission } from '../../auth/permissions/permission.enum';
+import { StoreScoped } from '../../auth/decorators/store-scope.decorator';
 
 @ApiTags('Productos de la Tienda')
 @Controller('storeproduct')
@@ -27,6 +30,8 @@ export class StoreProductController {
   constructor(private readonly storeProductService: StoreProductService) {}
 
   @Post('transfer')
+  @RequirePermissions(Permission.INVENTORY_MANAGE)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Transferir stock de la central a una tienda',
     description:
@@ -46,6 +51,8 @@ export class StoreProductController {
   }
 
   @Get('inventory')
+  @RequirePermissions(Permission.INVENTORY_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Consultar inventario de una tienda',
     description:
@@ -66,6 +73,8 @@ export class StoreProductController {
   }
 
   @Patch(':id')
+  @RequirePermissions(Permission.INVENTORY_MANAGE)
+  @StoreScoped({ resource: 'storeProduct' })
   @ApiOperation({
     summary: 'Actualizar un producto en tienda (Inventario/Precios)',
     description:

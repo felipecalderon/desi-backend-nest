@@ -1,5 +1,6 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { UserStoreRole } from '../entities/userstore.entity';
 
 export class CreateUserstoreDto {
   @ApiProperty({
@@ -17,4 +18,14 @@ export class CreateUserstoreDto {
   @IsString()
   @IsUUID()
   storeID!: string;
+
+  @ApiProperty({
+    description: 'Rol contextual del usuario dentro de esta tienda',
+    enum: UserStoreRole,
+    example: UserStoreRole.STORE_MANAGER,
+    required: false,
+  })
+  @IsOptional()
+  @IsEnum(UserStoreRole)
+  role?: UserStoreRole;
 }

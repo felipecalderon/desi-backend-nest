@@ -2,6 +2,9 @@ import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryMovementDto } from './dto/create-inventory-movement.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/permissions/permission.enum';
+import { StoreScoped } from '../auth/decorators/store-scope.decorator';
 
 @ApiTags('Inventario')
 @Controller('inventory')
@@ -9,6 +12,8 @@ export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Post('movements')
+  @RequirePermissions(Permission.INVENTORY_MANAGE)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Crear un movimiento de inventario manual',
     description:
@@ -29,6 +34,8 @@ export class InventoryController {
   }
 
   @Get('store/:storeID')
+  @RequirePermissions(Permission.INVENTORY_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Obtener el stock de una tienda específica',
     description:

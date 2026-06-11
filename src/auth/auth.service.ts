@@ -14,6 +14,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
+  private getGlobalRole(role: string): 'ROLE_ADMIN' | 'ROLE_USER' {
+    return role === 'admin' ? 'ROLE_ADMIN' : 'ROLE_USER';
+  }
+
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
@@ -30,6 +34,7 @@ export class AuthService {
         id: user.userID,
         email: user.email,
         role: user.role,
+        roles: this.getGlobalRole(user.role),
       };
 
       return {
@@ -38,12 +43,15 @@ export class AuthService {
           email: user.email,
           name: user.name,
           role: user.role,
+          roles: this.getGlobalRole(user.role),
           userImg: user.userImg,
         },
         accessToken: await this.jwtService.signAsync(payload),
       };
     } catch (error) {
-      this.logger.error(`Login failed for email ${email}: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Login failed for email ${email}: ${errorMessage}`);
       throw new UnauthorizedException('Invalid credentials');
     }
   }
@@ -55,6 +63,7 @@ export class AuthService {
       id: user.userID,
       email: user.email,
       role: user.role,
+      roles: this.getGlobalRole(user.role),
     };
 
     return {
@@ -63,6 +72,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        roles: this.getGlobalRole(user.role),
         userImg: user.userImg,
       },
       accessToken: await this.jwtService.signAsync(payload),

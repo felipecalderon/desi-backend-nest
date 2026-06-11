@@ -6,19 +6,33 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleStatusDto } from './dto/update-sale-status.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { Sale } from './entities/sale.entity';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/entities/user.entity';
+import { RequirePermissions } from '../auth/decorators/permissions.decorator';
+import { Permission } from '../auth/permissions/permission.enum';
+import { StoreScoped } from '../auth/decorators/store-scope.decorator';
 
 @ApiTags('Ventas')
+@Roles(
+  UserRole.ADMIN,
+  UserRole.STORE_MANAGER,
+  UserRole.CONSIGNADO,
+  UserRole.TERCERO,
+)
 @Controller('sales')
 export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Post()
+  @RequirePermissions(Permission.SALES_CREATE)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Registrar una venta',
     description:
@@ -39,6 +53,8 @@ export class SalesController {
   }
 
   @Get()
+  @RequirePermissions(Permission.SALES_VIEW)
+  @StoreScoped()
   @ApiOperation({
     summary: 'Obtener todas las ventas registradas',
     description:
@@ -49,11 +65,13 @@ export class SalesController {
     description: 'Lista de ventas.',
     type: [Sale],
   })
-  findAll() {
-    return this.salesService.findAll();
+  findAll(@Query('storeID') storeID: string) {
+    return this.salesService.findAll(storeID);
   }
 
   @Get(':id')
+  @RequirePermissions(Permission.SALES_VIEW)
+  @StoreScoped({ resource: 'sale' })
   @ApiOperation({
     summary: 'Obtener detalle de una venta específica',
     description:
@@ -75,6 +93,8 @@ export class SalesController {
   }
 
   @Patch(':id/status')
+  @RequirePermissions(Permission.SALES_MANAGE)
+  @StoreScoped({ resource: 'sale' })
   @ApiOperation({
     summary: 'Actualizar el estado de una venta',
     description:

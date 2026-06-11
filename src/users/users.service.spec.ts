@@ -15,6 +15,7 @@ describe('UsersService', () => {
   const mockUserRepository = {
     find: jest.fn(),
     findOne: jest.fn(),
+    countBy: jest.fn(),
     create: jest.fn(),
     save: jest.fn(),
     remove: jest.fn(),
@@ -76,6 +77,49 @@ describe('UsersService', () => {
       expect(mockUserRepository.create).toHaveBeenCalled();
       expect(mockUserRepository.save).toHaveBeenCalled();
       expect(result.password).toBe('hashedPassword');
+    });
+  });
+
+  describe('createInitialAdmin', () => {
+    it('should create the first admin user', async () => {
+      const createDto = {
+        email: 'admin@example.com',
+        name: 'Admin User',
+        password: 'plainPassword',
+      };
+
+      mockUserRepository.countBy.mockResolvedValue(0);
+      mockUserRepository.create.mockReturnValue({
+        ...createDto,
+        role: UserRole.ADMIN,
+        password: 'hashedPassword',
+      });
+      mockUserRepository.save.mockResolvedValue({
+        ...mockUser,
+        ...createDto,
+        role: UserRole.ADMIN,
+        password: 'hashedPassword',
+      });
+
+      const result = await service.createInitialAdmin(createDto);
+
+      expect(mockUserRepository.countBy).toHaveBeenCalledWith({
+        role: UserRole.ADMIN,
+      });
+      expect(result.role).toBe(UserRole.ADMIN);
+      expect(bcrypt.hash).toHaveBeenCalledWith('plainPassword', 10);
+    });
+
+    it('should reject bootstrap when an admin already exists', async () => {
+      mockUserRepository.countBy.mockResolvedValue(1);
+
+      await expect(
+        service.createInitialAdmin({
+          email: 'admin@example.com',
+          name: 'Admin User',
+          password: 'plainPassword',
+        }),
+      ).rejects.toThrow('Initial admin already exists');
     });
   });
 

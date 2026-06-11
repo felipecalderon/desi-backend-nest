@@ -1,0 +1,17 @@
+export enum Permission {
+  USERS_MANAGE = 'users:manage',
+  STORES_VIEW = 'stores:view',
+  STORES_MANAGE = 'stores:manage',
+  STORE_USERS_VIEW = 'store-users:view',
+  STORE_USERS_MANAGE = 'store-users:manage',
+  PRODUCTS_VIEW = 'products:view',
+  PRODUCTS_MANAGE = 'products:manage',
+  INVENTORY_VIEW = 'inventory:view',
+  INVENTORY_MANAGE = 'inventory:manage',
+  SALES_VIEW = 'sales:view',
+  SALES_CREATE = 'sales:create',
+  SALES_MANAGE = 'sales:manage',
+  EXPENSES_VIEW = 'expenses:view',
+  EXPENSES_MANAGE = 'expenses:manage',
+  REPORTS_VIEW = 'reports:view',
+}

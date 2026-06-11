@@ -7,6 +7,7 @@ import { UsersModule } from '../users/users.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { PermissionsGuard } from './guards/permissions.guard';
 type Unit =
   | 'Years'
   | 'Year'
@@ -73,6 +74,7 @@ type StringValue =
     AuthService,
     AuthGuard,
     RolesGuard,
+    PermissionsGuard,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
@@ -81,7 +83,11 @@ type StringValue =
       provide: APP_GUARD,
       useClass: RolesGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
   ],
-  exports: [AuthService, AuthGuard, RolesGuard, JwtModule],
+  exports: [AuthService, AuthGuard, RolesGuard, PermissionsGuard, JwtModule],
 })
 export class AuthModule {}

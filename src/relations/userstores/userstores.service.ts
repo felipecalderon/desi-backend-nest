@@ -5,8 +5,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { UserStore } from './entities/userstore.entity';
+import { UserStore, UserStoreRole } from './entities/userstore.entity';
 import { CreateUserstoreDto } from './dto/create-userstore.dto';
+import { UpdateUserstoreDto } from './dto/update-userstore.dto';
 import { UsersService } from '../../users/users.service';
 import { StoresService } from '../../stores/stores.service';
 
@@ -46,6 +47,7 @@ export class UserstoresService {
     const userStore = this.userStoreRepo.create({
       user,
       store,
+      role: dto.role ?? UserStoreRole.STORE_MANAGER,
     });
 
     return this.userStoreRepo.save(userStore);
@@ -67,6 +69,23 @@ export class UserstoresService {
       where: { store: { storeID: storeId } },
       relations: ['user'],
     });
+  }
+
+  async update(id: string, dto: UpdateUserstoreDto): Promise<UserStore> {
+    const userStore = await this.userStoreRepo.findOne({
+      where: { userStoreID: id },
+      relations: ['user', 'store'],
+    });
+
+    if (!userStore) {
+      throw new NotFoundException(`UserStore with ID ${id} not found`);
+    }
+
+    if (dto.role) {
+      userStore.role = dto.role;
+    }
+
+    return this.userStoreRepo.save(userStore);
   }
 
   async remove(id: string): Promise<void> {

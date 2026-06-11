@@ -8,6 +8,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,15 +16,41 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Store } from '../stores/entities/store.entity';
 import { CustomMessage } from '../common/decorators/response-message';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { Public } from '../auth/decorators/public.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @ApiTags('Usuarios')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  private toSafeUser(user: User) {
+    const { password, ...safeUser } = user;
+    void password;
+    return {
+      ...safeUser,
+      roles: user.role === UserRole.ADMIN ? 'ROLE_ADMIN' : 'ROLE_USER',
+    };
+  }
+
   @Public()
+  @Post('bootstrap-admin')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Crear el primer super admin del sistema',
+    description:
+      'Solo funciona si todavÃ­a no existe ningÃºn usuario con rol admin.',
+  })
+  async createInitialAdmin(@Body() createAdminDto: CreateAdminDto) {
+    const user = await this.usersService.createInitialAdmin(createAdminDto);
+    return this.toSafeUser(user);
+  }
+
+  @Roles(UserRole.ADMIN)
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo usuario' })
@@ -34,11 +61,12 @@ export class UsersController {
   })
   @ApiResponse({ status: 400, description: 'Solicitud incorrecta.' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.usersService.create(createUserDto);
+    return this.toSafeUser(user);
   }
 
-  @Public()
+  @Roles(UserRole.ADMIN)
   @Get()
   @CustomMessage('Lista de usuarios obtenida exitosamente')
   @ApiOperation({ summary: 'Obtener todos los usuarios' })
@@ -47,8 +75,9 @@ export class UsersController {
     description: 'Lista de todos los usuarios.',
     type: [User],
   })
-  findAll() {
-    return this.usersService.findAll();
+  async findAll() {
+    const users = await this.usersService.findAll();
+    return users.map((user) => this.toSafeUser(user));
   }
 
   @Get(':id/stores')
@@ -64,7 +93,16 @@ export class UsersController {
     type: [Store],
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  findStoresByUserId(@Param('id') id: string) {
+  findStoresByUserId(
+    @Param('id') id: string,
+    @GetUser() currentUser: JwtPayload,
+  ) {
+    if (currentUser.role !== UserRole.ADMIN && currentUser.id !== id) {
+      throw new ForbiddenException(
+        'User can only access stores assigned to their own account',
+      );
+    }
+
     return this.usersService.findStoresByUserId(id);
   }
 
@@ -78,8 +116,10 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'Usuario encontrado.', type: User })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  findOne(@Param('email') email: string) {
-    return this.usersService.findOneByEmail(email);
+  @Roles(UserRole.ADMIN)
+  async findOne(@Param('email') email: string) {
+    const user = await this.usersService.findOneByEmail(email);
+    return this.toSafeUser(user);
   }
 
   @Patch(':id')
@@ -95,8 +135,10 @@ export class UsersController {
     type: User,
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @Roles(UserRole.ADMIN)
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    const user = await this.usersService.update(id, updateUserDto);
+    return this.toSafeUser(user);
   }
 
   @Delete(':id')
@@ -112,6 +154,7 @@ export class UsersController {
     description: 'El usuario ha sido eliminado exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
+  @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);
   }

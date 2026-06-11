@@ -1,10 +1,15 @@
 import * as bcrypt from 'bcrypt';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateAdminDto } from './dto/create-admin.dto';
 
 @Injectable()
 export class UsersService {
@@ -23,6 +28,19 @@ export class UsersService {
     });
 
     return this.userRepo.save(user);
+  }
+
+  async createInitialAdmin(dto: CreateAdminDto): Promise<User> {
+    const adminCount = await this.userRepo.countBy({ role: UserRole.ADMIN });
+
+    if (adminCount > 0) {
+      throw new ConflictException('Initial admin already exists');
+    }
+
+    return this.create({
+      ...dto,
+      role: UserRole.ADMIN,
+    });
   }
 
   async findAll(): Promise<User[]> {

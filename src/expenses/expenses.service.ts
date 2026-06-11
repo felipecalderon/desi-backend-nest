@@ -43,8 +43,9 @@ export class ExpensesService {
     }
   }
 
-  async findAll() {
+  async findAll(storeID?: string) {
     return await this.expenseRepository.find({
+      where: storeID ? { store: { storeID } } : undefined,
       relations: ['store'],
     });
   }
