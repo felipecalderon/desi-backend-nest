@@ -2,9 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, UserRole } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { Store, StoreType } from '../stores/entities/store.entity';
+import { UserStore } from '../relations/userstores/entities/userstore.entity';
 
 jest.mock('bcrypt');
 
@@ -20,6 +22,34 @@ describe('UsersService', () => {
     remove: jest.fn(),
   };
 
+  const mockUserTxRepository = {
+    createQueryBuilder: jest.fn(),
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockStoreTxRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockUserStoreTxRepository = {
+    create: jest.fn(),
+    save: jest.fn(),
+  };
+
+  const mockQueryBuilder = {
+    getExists: jest.fn(),
+  };
+
+  const mockManager = {
+    getRepository: jest.fn(),
+  };
+
+  const mockDataSource = {
+    transaction: jest.fn(),
+  };
+
   const mockUser: Partial<User> = {
     userID: 'uuid-1',
     email: 'test@example.com',
@@ -32,6 +62,22 @@ describe('UsersService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
+    mockDataSource.transaction.mockImplementation(async (callback) =>
+      callback(mockManager as any),
+    );
+    mockManager.getRepository.mockImplementation((entity) => {
+      if (entity === User) return mockUserTxRepository;
+      if (entity === Store) return mockStoreTxRepository;
+      if (entity === UserStore) return mockUserStoreTxRepository;
+      return null;
+    });
+    mockUserTxRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+    mockUserTxRepository.create.mockImplementation((input) => input);
+    mockUserTxRepository.save.mockImplementation(async (input) => input);
+    mockStoreTxRepository.create.mockImplementation((input) => input);
+    mockStoreTxRepository.save.mockImplementation(async (input) => input);
+    mockUserStoreTxRepository.create.mockImplementation((input) => input);
+    mockUserStoreTxRepository.save.mockImplementation(async (input) => input);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -39,6 +85,10 @@ describe('UsersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
+        },
+        {
+          provide: DataSource,
+          useValue: mockDataSource,
         },
       ],
     }).compile();
@@ -52,7 +102,7 @@ describe('UsersService', () => {
   });
 
   describe('create', () => {
-    it('should create a user with hashed password', async () => {
+    it('should create a user with hashed password when users already exist', async () => {
       const createDto = {
         email: 'new@example.com',
         name: 'New User',
@@ -60,11 +110,8 @@ describe('UsersService', () => {
         password: 'plainPassword',
       };
 
-      mockUserRepository.create.mockReturnValue({
-        ...createDto,
-        password: 'hashedPassword',
-      });
-      mockUserRepository.save.mockResolvedValue({
+      mockQueryBuilder.getExists.mockResolvedValue(true);
+      mockUserTxRepository.save.mockResolvedValue({
         ...mockUser,
         ...createDto,
         password: 'hashedPassword',
@@ -73,9 +120,75 @@ describe('UsersService', () => {
       const result = await service.create(createDto);
 
       expect(bcrypt.hash).toHaveBeenCalledWith('plainPassword', 10);
-      expect(mockUserRepository.create).toHaveBeenCalled();
-      expect(mockUserRepository.save).toHaveBeenCalled();
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockQueryBuilder.getExists).toHaveBeenCalled();
+      expect(mockUserTxRepository.create).toHaveBeenCalledWith({
+        ...createDto,
+        password: 'hashedPassword',
+      });
+      expect(mockStoreTxRepository.create).not.toHaveBeenCalled();
+      expect(mockUserStoreTxRepository.create).not.toHaveBeenCalled();
       expect(result.password).toBe('hashedPassword');
+    });
+
+    it('should create the first store and associate it with the first user', async () => {
+      const createDto = {
+        email: 'central@example.com',
+        name: 'Central User',
+        role: UserRole.ADMIN,
+        password: 'plainPassword',
+      };
+
+      const savedUser = {
+        ...mockUser,
+        ...createDto,
+        password: 'hashedPassword',
+      };
+      const savedStore = {
+        storeID: 'store-1',
+        location: 'Santiago',
+        rut: '11111111-1',
+        address: 'Santiago',
+        phone: '9999999',
+        city: 'Santiago',
+        storeImg: undefined,
+        email: 'central@demo.com',
+        name: 'Tienda de Central User',
+        type: StoreType.CENTRAL,
+        isCentralStore: true,
+      };
+
+      mockQueryBuilder.getExists.mockResolvedValue(false);
+      mockUserTxRepository.save.mockResolvedValue(savedUser);
+      mockStoreTxRepository.save.mockResolvedValue(savedStore);
+      mockUserStoreTxRepository.save.mockResolvedValue({
+        userStoreID: 'relation-1',
+        user: savedUser,
+        store: savedStore,
+      });
+
+      const result = await service.create(createDto);
+
+      expect(mockDataSource.transaction).toHaveBeenCalled();
+      expect(mockQueryBuilder.getExists).toHaveBeenCalled();
+      expect(mockStoreTxRepository.create).toHaveBeenCalledWith({
+        location: 'Santiago',
+        rut: '11111111-1',
+        address: 'Santiago',
+        phone: '9999999',
+        city: 'Santiago',
+        storeImg: undefined,
+        email: 'central@demo.com',
+        name: 'Tienda de Central User',
+        type: StoreType.CENTRAL,
+        isCentralStore: true,
+      });
+      expect(mockUserStoreTxRepository.create).toHaveBeenCalledWith({
+        user: savedUser,
+        store: savedStore,
+      });
+      expect(result.userStores).toHaveLength(1);
+      expect(result.userStores?.[0].store).toEqual(savedStore);
     });
   });
 
