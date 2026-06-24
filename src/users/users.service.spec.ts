@@ -7,6 +7,7 @@ import { NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { Store, StoreType } from '../stores/entities/store.entity';
 import { UserStore } from '../relations/userstores/entities/userstore.entity';
+import { ConfigService } from '@nestjs/config';
 
 jest.mock('bcrypt');
 
@@ -30,6 +31,7 @@ describe('UsersService', () => {
 
   const mockStoreTxRepository = {
     create: jest.fn(),
+    findOne: jest.fn(),
     save: jest.fn(),
   };
 
@@ -75,6 +77,10 @@ describe('UsersService', () => {
     mockUserTxRepository.create.mockImplementation((input) => input);
     mockUserTxRepository.save.mockImplementation(async (input) => input);
     mockStoreTxRepository.create.mockImplementation((input) => input);
+    mockStoreTxRepository.findOne.mockResolvedValue({
+      storeID: 'store-1',
+      name: 'Store 1',
+    });
     mockStoreTxRepository.save.mockImplementation(async (input) => input);
     mockUserStoreTxRepository.create.mockImplementation((input) => input);
     mockUserStoreTxRepository.save.mockImplementation(async (input) => input);
@@ -89,6 +95,10 @@ describe('UsersService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue(undefined) },
         },
       ],
     }).compile();
@@ -108,6 +118,7 @@ describe('UsersService', () => {
         name: 'New User',
         role: UserRole.STORE_MANAGER,
         password: 'plainPassword',
+        storeID: 'store-1',
       };
 
       mockQueryBuilder.getExists.mockResolvedValue(true);
@@ -123,11 +134,19 @@ describe('UsersService', () => {
       expect(mockDataSource.transaction).toHaveBeenCalled();
       expect(mockQueryBuilder.getExists).toHaveBeenCalled();
       expect(mockUserTxRepository.create).toHaveBeenCalledWith({
-        ...createDto,
+        email: createDto.email,
+        name: createDto.name,
+        role: createDto.role,
         password: 'hashedPassword',
       });
-      expect(mockStoreTxRepository.create).not.toHaveBeenCalled();
-      expect(mockUserStoreTxRepository.create).not.toHaveBeenCalled();
+      expect(mockStoreTxRepository.findOne).toHaveBeenCalledWith({
+        where: { storeID: 'store-1' },
+      });
+      expect(mockUserStoreTxRepository.create).toHaveBeenCalledWith({
+        user: expect.objectContaining({ email: createDto.email }),
+        store: expect.objectContaining({ storeID: 'store-1' }),
+        role: UserRole.STORE_MANAGER,
+      });
       expect(result.password).toBe('hashedPassword');
     });
 
@@ -186,6 +205,7 @@ describe('UsersService', () => {
       expect(mockUserStoreTxRepository.create).toHaveBeenCalledWith({
         user: savedUser,
         store: savedStore,
+        role: UserRole.ADMIN,
       });
       expect(result.userStores).toHaveLength(1);
       expect(result.userStores?.[0].store).toEqual(savedStore);
@@ -199,7 +219,9 @@ describe('UsersService', () => {
       const result = await service.findAll();
 
       expect(result).toEqual([mockUser]);
-      expect(mockUserRepository.find).toHaveBeenCalled();
+      expect(mockUserRepository.find).toHaveBeenCalledWith({
+        relations: ['userStores', 'userStores.store'],
+      });
     });
   });
 
@@ -212,6 +234,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: 'test@example.com' },
+        relations: ['userStores', 'userStores.store'],
       });
     });
 
@@ -233,6 +256,7 @@ describe('UsersService', () => {
       expect(result).toEqual(mockUser);
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { userID: 'uuid-1' },
+        relations: ['userStores', 'userStores.store'],
       });
     });
 
@@ -249,13 +273,24 @@ describe('UsersService', () => {
     it('should return stores for a user', async () => {
       const userWithStores = {
         ...mockUser,
-        userStores: [{ store: { storeID: 'store-1', name: 'Store 1' } }],
+        userStores: [
+          {
+            store: { storeID: 'store-1', name: 'Store 1' },
+            role: UserRole.STORE_MANAGER,
+          },
+        ],
       };
       mockUserRepository.findOne.mockResolvedValue(userWithStores);
 
       const result = await service.findStoresByUserId('uuid-1');
 
-      expect(result).toEqual([{ storeID: 'store-1', name: 'Store 1' }]);
+      expect(result).toEqual([
+        {
+          storeID: 'store-1',
+          name: 'Store 1',
+          role: UserRole.STORE_MANAGER,
+        },
+      ]);
     });
 
     it('should throw NotFoundException if user not found', async () => {

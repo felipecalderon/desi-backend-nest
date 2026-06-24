@@ -30,9 +30,10 @@ export class SalesService {
   private async findOneInTransaction(
     manager: EntityManager,
     id: string,
+    storeID?: string,
   ): Promise<Sale> {
     const sale = await manager.findOne(Sale, {
-      where: { saleID: id },
+      where: { saleID: id, ...(storeID ? { store: { storeID } } : {}) },
       relations: ['store', 'saleProducts', 'saleProducts.variation'],
     });
 
@@ -129,16 +130,17 @@ export class SalesService {
     });
   }
 
-  findAll(): Promise<Sale[]> {
+  findAll(storeID?: string): Promise<Sale[]> {
     return this.saleRepository.find({
+      ...(storeID ? { where: { store: { storeID } } } : {}),
       relations: ['store', 'saleProducts', 'saleProducts.variation'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findOne(id: string): Promise<Sale> {
+  async findOne(id: string, storeID?: string): Promise<Sale> {
     const sale = await this.saleRepository.findOne({
-      where: { saleID: id },
+      where: { saleID: id, ...(storeID ? { store: { storeID } } : {}) },
       relations: ['store', 'saleProducts', 'saleProducts.variation'],
     });
     if (!sale) {
@@ -150,10 +152,11 @@ export class SalesService {
   async updateStatus(
     id: string,
     updateSaleStatusDto: UpdateSaleStatusDto,
+    storeID?: string,
   ): Promise<Sale> {
-    const sale = await this.findOne(id);
+    const sale = await this.findOne(id, storeID);
     sale.status = updateSaleStatusDto.status;
     await this.saleRepository.save(sale);
-    return this.findOne(id);
+    return this.findOne(id, storeID);
   }
 }

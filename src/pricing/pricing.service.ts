@@ -114,7 +114,10 @@ export class PricingService {
     return query.getMany();
   }
 
-  async calculatePrice(input: PricingInput): Promise<PricingResult> {
+  async calculatePrice(
+    input: PricingInput,
+    activeStoreID?: string,
+  ): Promise<PricingResult> {
     const {
       storeProductID,
       quantity = 1,
@@ -157,7 +160,10 @@ export class PricingService {
 
     if (shouldLoadStoreProduct) {
       storeProduct = await this.dataSource.manager.findOne(StoreProduct, {
-        where: { storeProductID },
+        where: {
+          storeProductID,
+          ...(activeStoreID ? { store: { storeID: activeStoreID } } : {}),
+        },
         relations: ['store', 'variation', 'variation.product'],
       });
       if (!storeProduct) {

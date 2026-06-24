@@ -7,6 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { UserRole } from '../../users/entities/user.entity';
+import { JwtStoreMembership } from '../interfaces/jwt-payload.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -28,7 +29,18 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const hasRole = requiredRoles.some((role) => user.role === role);
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return true;
+    }
+
+    const storeId = context.switchToHttp().getRequest().headers['x-store-id'];
+    const activeStoreRole = user.stores?.find(
+      (store: JwtStoreMembership) => store.storeID === storeId,
+    )?.role;
+
+    const hasRole = requiredRoles.some(
+      (role) => user.role === role || activeStoreRole === role,
+    );
 
     if (!hasRole) {
       throw new ForbiddenException(

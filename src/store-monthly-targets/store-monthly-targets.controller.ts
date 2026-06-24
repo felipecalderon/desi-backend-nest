@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Headers,
   Param,
   Patch,
   Post,
@@ -16,6 +17,9 @@ import { CreateStoreMonthlyTargetDto } from './dto/create-store-monthly-target.d
 import { UpdateStoreMonthlyTargetDto } from './dto/update-store-monthly-target.dto';
 import { StoreMonthlyTarget } from './entities/store-monthly-target.entity';
 import { UpsertStoreMonthlyTargetDto } from './dto/upsert-store-monthly-target.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Metas Mensuales de Tienda')
 @Controller('store-monthly-targets')
@@ -32,7 +36,12 @@ export class StoreMonthlyTargetsController {
     description: 'Meta mensual creada exitosamente.',
     type: StoreMonthlyTarget,
   })
-  create(@Body() createDto: CreateStoreMonthlyTargetDto) {
+  create(
+    @Body() createDto: CreateStoreMonthlyTargetDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    createDto.storeID = getRequiredActiveStoreID(user, activeStoreID);
     return this.storeMonthlyTargetsService.create(createDto);
   }
 
@@ -43,8 +52,12 @@ export class StoreMonthlyTargetsController {
     description: 'Lista de metas mensuales.',
     type: [StoreMonthlyTarget],
   })
-  findAll() {
-    return this.storeMonthlyTargetsService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeMonthlyTargetsService.findAll(storeID);
   }
 
   @Get(':storeID')
@@ -69,9 +82,12 @@ export class StoreMonthlyTargetsController {
   getByStore(
     @Param('storeID', ParseUUIDPipe) storeID: string,
     @Param('period') period?: string,
+    @Headers('x-store-id') activeStoreID?: string,
+    @GetUser() user?: JwtPayload,
   ) {
+    const scopedStoreID = getRequiredActiveStoreID(user!, activeStoreID);
     return this.storeMonthlyTargetsService.getTargetByStoreAndPeriod(
-      storeID,
+      scopedStoreID,
       period,
     );
   }
@@ -91,8 +107,14 @@ export class StoreMonthlyTargetsController {
   upsert(
     @Param('storeID', ParseUUIDPipe) storeID: string,
     @Body() upsertDto: UpsertStoreMonthlyTargetDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.storeMonthlyTargetsService.upsertByStore(storeID, upsertDto);
+    const scopedStoreID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeMonthlyTargetsService.upsertByStore(
+      scopedStoreID,
+      upsertDto,
+    );
   }
 
   @Patch(':id')
@@ -117,8 +139,11 @@ export class StoreMonthlyTargetsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateDto: UpdateStoreMonthlyTargetDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.storeMonthlyTargetsService.update(id, updateDto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeMonthlyTargetsService.update(id, updateDto, storeID);
   }
 
   @Delete(':id')
@@ -137,7 +162,12 @@ export class StoreMonthlyTargetsController {
     status: 204,
     description: 'Meta mensual eliminada exitosamente.',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.storeMonthlyTargetsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeMonthlyTargetsService.remove(id, storeID);
   }
 }

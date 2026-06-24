@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -14,6 +15,9 @@ import { UpdatePurchaseOrderDto } from './dto/update-purchase-order.dto';
 import { UpdatePurchaseOrderStatusDto } from './dto/update-purchase-order-status.dto';
 import { VerifyPurchaseOrderDto } from './dto/verify-purchase-order.dto';
 import { PurchaseOrder } from './entities/purchase-order.entity';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Ordenes de Compra')
 @Controller('purchase-orders')
@@ -27,7 +31,12 @@ export class PurchaseOrdersController {
     description: 'Orden de compra creada.',
     type: PurchaseOrder,
   })
-  create(@Body() dto: CreatePurchaseOrderDto) {
+  create(
+    @Body() dto: CreatePurchaseOrderDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    dto.storeID = getRequiredActiveStoreID(user, activeStoreID);
     return this.purchaseOrdersService.create(dto);
   }
 
@@ -38,8 +47,12 @@ export class PurchaseOrdersController {
     description: 'Lista de órdenes de compra.',
     type: [PurchaseOrder],
   })
-  findAll() {
-    return this.purchaseOrdersService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.purchaseOrdersService.findAll(storeID);
   }
 
   @Get(':id')
@@ -54,8 +67,13 @@ export class PurchaseOrdersController {
     description: 'Detalle de la orden de compra.',
     type: PurchaseOrder,
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.purchaseOrdersService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.purchaseOrdersService.findOne(id, storeID);
   }
 
   @Patch(':id')
@@ -73,8 +91,12 @@ export class PurchaseOrdersController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePurchaseOrderDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.purchaseOrdersService.update(id, dto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    dto.storeID = storeID;
+    return this.purchaseOrdersService.update(id, dto, storeID);
   }
 
   @Patch(':id/status')
@@ -92,8 +114,11 @@ export class PurchaseOrdersController {
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdatePurchaseOrderStatusDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.purchaseOrdersService.updateStatus(id, dto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.purchaseOrdersService.updateStatus(id, dto, storeID);
   }
 
   @Post(':id/verify')
@@ -112,7 +137,10 @@ export class PurchaseOrdersController {
   verify(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: VerifyPurchaseOrderDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.purchaseOrdersService.verify(id, dto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.purchaseOrdersService.verify(id, dto, storeID);
   }
 }

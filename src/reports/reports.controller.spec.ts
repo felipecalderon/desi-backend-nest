@@ -18,7 +18,15 @@ describe('ReportsController', () => {
   });
 
   it('delegates to the income statement service', async () => {
-    expect(await controller.incomeStatement({} as any)).toEqual({ foo: 'bar' });
-    expect(mockService.getIncomeStatement).toHaveBeenCalledWith({} as any);
+    expect(
+      await controller.incomeStatement({} as any, 'store-1', {
+        id: 'user-1',
+        email: 'test@example.com',
+        role: 'admin',
+      } as any),
+    ).toEqual({ foo: 'bar' });
+    expect(mockService.getIncomeStatement).toHaveBeenCalledWith({
+      storeId: 'store-1',
+    } as any);
   });
 });

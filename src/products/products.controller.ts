@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Headers,
   ParseUUIDPipe,
   Query,
 } from '@nestjs/common';
@@ -15,7 +16,9 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Product } from './entities/product.entity';
-import { Public } from '../auth/decorators/public.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Productos')
 @Controller('products')
@@ -29,11 +32,15 @@ export class ProductsController {
     description: 'El producto ha sido creado exitosamente.',
     type: Product,
   })
-  create(@Body() createProductDto: CreateProductDto) {
-    return this.productsService.create(createProductDto);
+  create(
+    @Body() createProductDto: CreateProductDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.productsService.create(createProductDto, storeID);
   }
 
-  @Public()
   @Get()
   @ApiOperation({ summary: 'Obtener todos los productos' })
   @ApiResponse({
@@ -41,8 +48,13 @@ export class ProductsController {
     description: 'Lista de productos.',
     type: [Product],
   })
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.productsService.findAll(paginationDto);
+  findAll(
+    @Query() paginationDto: PaginationDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.productsService.findAll(paginationDto, storeID);
   }
 
   @Get(':id')
@@ -58,8 +70,13 @@ export class ProductsController {
     type: Product,
   })
   @ApiResponse({ status: 404, description: 'Producto no encontrado.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.productsService.findOne(id, storeID);
   }
 
   @Patch(':id')
@@ -77,8 +94,11 @@ export class ProductsController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateProductDto: UpdateProductDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.productsService.update(id, updateProductDto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.productsService.update(id, updateProductDto, storeID);
   }
 
   @Delete(':id')
@@ -92,7 +112,12 @@ export class ProductsController {
     status: 204,
     description: 'Producto eliminado exitosamente.',
   })
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.productsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.productsService.remove(id, storeID);
   }
 }

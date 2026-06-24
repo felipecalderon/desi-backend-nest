@@ -18,17 +18,29 @@ export class StoresService {
     return this.storeRepo.save(store);
   }
 
-  async findAll(): Promise<Store[]> {
-    return this.storeRepo.find();
+  async findAll(storeID?: string): Promise<Store[]> {
+    return this.storeRepo.find({
+      ...(storeID ? { where: { storeID } } : {}),
+    });
   }
 
-  async findOne(id: string): Promise<Store> {
-    const store = await this.storeRepo.findOne({ where: { storeID: id } });
+  async findOne(id: string, activeStoreID?: string): Promise<Store> {
+    if (activeStoreID && activeStoreID !== id) {
+      throw new NotFoundException(`Store with ID ${id} not found`);
+    }
+
+    const store = await this.storeRepo.findOne({
+      where: { storeID: id },
+    });
     if (!store) throw new NotFoundException(`Store with ID ${id} not found`);
     return store;
   }
 
-  async findUsersByStoreId(id: string): Promise<any> {
+  async findUsersByStoreId(id: string, activeStoreID?: string): Promise<any> {
+    if (activeStoreID && activeStoreID !== id) {
+      throw new NotFoundException(`Tienda con ID ${id} no encontrada`);
+    }
+
     const store = await this.storeRepo.findOne({
       where: { storeID: id },
       relations: ['userStores', 'userStores.user'],
@@ -38,17 +50,24 @@ export class StoresService {
       throw new NotFoundException(`Tienda con ID ${id} no encontrada`);
     }
 
-    return store.userStores.map((userStore: UserStore) => userStore.user);
+    return store.userStores.map((userStore: UserStore) => ({
+      ...userStore.user,
+      role: userStore.role,
+    }));
   }
 
-  async update(id: string, dto: UpdateStoreDto): Promise<Store> {
-    const store = await this.findOne(id);
+  async update(
+    id: string,
+    dto: UpdateStoreDto,
+    activeStoreID?: string,
+  ): Promise<Store> {
+    const store = await this.findOne(id, activeStoreID);
     Object.assign(store, dto);
     return this.storeRepo.save(store);
   }
 
-  async remove(id: string): Promise<void> {
-    const store = await this.findOne(id);
+  async remove(id: string, activeStoreID?: string): Promise<void> {
+    const store = await this.findOne(id, activeStoreID);
     await this.storeRepo.remove(store);
   }
 }

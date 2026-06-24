@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MinLength,
 } from 'class-validator';
 import { UserRole } from '../entities/user.entity';
@@ -51,4 +52,14 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   password!: string;
+
+  @ApiProperty({
+    description:
+      'Tienda a la que pertenece el usuario. Requerido para usuarios que no son super admin.',
+    example: '123e4567-e89b-12d3-a456-426614174001',
+    required: false,
+  })
+  @IsOptional()
+  @IsUUID()
+  storeID?: string;
 }

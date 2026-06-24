@@ -192,16 +192,20 @@ export class PurchaseOrdersService {
     });
   }
 
-  findAll(): Promise<PurchaseOrder[]> {
+  findAll(storeID?: string): Promise<PurchaseOrder[]> {
     return this.purchaseOrderRepository.find({
+      ...(storeID ? { where: { store: { storeID } } } : {}),
       relations: ['store', 'items', 'items.variation'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findOne(id: string): Promise<PurchaseOrder> {
+  async findOne(id: string, storeID?: string): Promise<PurchaseOrder> {
     const purchaseOrder = await this.purchaseOrderRepository.findOne({
-      where: { purchaseOrderID: id },
+      where: {
+        purchaseOrderID: id,
+        ...(storeID ? { store: { storeID } } : {}),
+      },
       relations: ['store', 'items', 'items.variation'],
     });
 
@@ -215,10 +219,14 @@ export class PurchaseOrdersService {
   async update(
     id: string,
     dto: UpdatePurchaseOrderDto,
+    storeID?: string,
   ): Promise<PurchaseOrder> {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
-        where: { purchaseOrderID: id },
+        where: {
+          purchaseOrderID: id,
+          ...(storeID ? { store: { storeID } } : {}),
+        },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -326,17 +334,21 @@ export class PurchaseOrdersService {
       );
 
       await manager.save(purchaseOrder);
-      return this.findOne(id);
+      return this.findOne(id, storeID);
     });
   }
 
   async updateStatus(
     id: string,
     dto: UpdatePurchaseOrderStatusDto,
+    storeID?: string,
   ): Promise<PurchaseOrder> {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
-        where: { purchaseOrderID: id },
+        where: {
+          purchaseOrderID: id,
+          ...(storeID ? { store: { storeID } } : {}),
+        },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -364,7 +376,7 @@ export class PurchaseOrdersService {
 
       // si no cambia el estado, no se toca stock
       if (previousStatus === nextStatus) {
-        return this.findOne(id);
+        return this.findOne(id, storeID);
       }
 
       // Pasar a Pagado desde Pendiente o Anulado -> aplicar stock
@@ -385,17 +397,21 @@ export class PurchaseOrdersService {
 
       purchaseOrder.paymentStatus = nextStatus;
       await manager.save(purchaseOrder);
-      return this.findOne(id);
+      return this.findOne(id, storeID);
     });
   }
 
   async verify(
     id: string,
     dto: VerifyPurchaseOrderDto,
+    storeID?: string,
   ): Promise<{ summary: Record<string, number>; order: PurchaseOrder }> {
     return this.dataSource.transaction(async (manager) => {
       const purchaseOrder = await manager.findOne(PurchaseOrder, {
-        where: { purchaseOrderID: id },
+        where: {
+          purchaseOrderID: id,
+          ...(storeID ? { store: { storeID } } : {}),
+        },
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -492,7 +508,7 @@ export class PurchaseOrdersService {
 
       await manager.save(purchaseOrder);
 
-      const order = await this.findOne(id);
+      const order = await this.findOne(id, storeID);
       return { summary, order };
     });
   }

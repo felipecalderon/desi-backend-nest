@@ -43,8 +43,9 @@ export class ExpensesService {
     }
   }
 
-  async findAll() {
+  async findAll(storeID?: string) {
     return await this.expenseRepository.find({
+      ...(storeID ? { where: { store: { storeID } } } : {}),
       relations: ['store'],
     });
   }
@@ -168,23 +169,23 @@ export class ExpensesService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, storeID?: string) {
     const expense = await this.expenseRepository.findOne({
-      where: { id },
+      where: { id, ...(storeID ? { store: { storeID } } : {}) },
       relations: ['store'],
     });
     if (!expense) throw new NotFoundException('Expense not found');
     return expense;
   }
 
-  async update(id: string, updateExpenseDto: UpdateExpenseDto) {
-    const expense = await this.findOne(id);
+  async update(id: string, updateExpenseDto: UpdateExpenseDto, storeID?: string) {
+    const expense = await this.findOne(id, storeID);
     const updatedExpense = Object.assign(expense, updateExpenseDto);
     return await this.expenseRepository.save(updatedExpense);
   }
 
-  async remove(id: string) {
-    const expense = await this.findOne(id);
+  async remove(id: string, storeID?: string) {
+    const expense = await this.findOne(id, storeID);
     return await this.expenseRepository.remove(expense);
   }
 }

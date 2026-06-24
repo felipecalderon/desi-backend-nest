@@ -1,7 +1,10 @@
-import { Controller, Post, Body, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Headers } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { CreateInventoryMovementDto } from './dto/create-inventory-movement.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Inventario')
 @Controller('inventory')
@@ -24,7 +27,13 @@ export class InventoryController {
   })
   createMovement(
     @Body() createInventoryMovementDto: CreateInventoryMovementDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
+    createInventoryMovementDto.storeID = getRequiredActiveStoreID(
+      user,
+      activeStoreID,
+    );
     return this.inventoryService.createMovement(createInventoryMovementDto);
   }
 
@@ -40,7 +49,12 @@ export class InventoryController {
     description: 'Lista de inventario recuperada exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  getStoreStock(@Param('storeID') storeID: string) {
-    return this.inventoryService.getStoreStock(storeID);
+  getStoreStock(
+    @Param('storeID') storeID: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.inventoryService.getStoreStock(scopedStoreID);
   }
 }

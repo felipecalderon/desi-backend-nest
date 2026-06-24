@@ -18,6 +18,7 @@ import {
 } from './entities/special-offer.entity';
 import { CreateSpecialOfferDto } from './dto/create-special-offer.dto';
 import { UpdateSpecialOfferDto } from './dto/update-special-offer.dto';
+import { StoreProduct } from '../relations/storeproduct/entities/storeproduct.entity';
 
 @Injectable()
 export class OfferService {
@@ -28,10 +29,12 @@ export class OfferService {
 
   async createSpecialOffer(
     createSpecialOfferDto: CreateSpecialOfferDto,
+    activeStoreID?: string,
   ): Promise<SpecialOffer> {
     const { startDate, endDate, storeProductID, ...rest } =
       createSpecialOfferDto;
     this.validateDateRange(startDate, endDate);
+    await this.assertStoreProductBelongsToStore(storeProductID, activeStoreID);
 
     const offer = this.specialOfferRepository.create({
       ...rest,
@@ -45,9 +48,11 @@ export class OfferService {
   async updateSpecialOffer(
     offerID: string,
     updateSpecialOfferDto: UpdateSpecialOfferDto,
+    activeStoreID?: string,
   ): Promise<SpecialOffer> {
     const offer = await this.specialOfferRepository.findOne({
       where: { offerID },
+      relations: ['storeProduct', 'storeProduct.store'],
     });
     if (!offer) throw new NotFoundException('Oferta especial no encontrada');
 
@@ -56,6 +61,10 @@ export class OfferService {
     this.validateDateRange(
       startDate ?? offer.startDate,
       endDate ?? offer.endDate,
+    );
+    await this.assertStoreProductBelongsToStore(
+      storeProductID ?? offer.storeProduct.storeProductID,
+      activeStoreID,
     );
 
     Object.assign(offer, {
@@ -71,7 +80,10 @@ export class OfferService {
     return this.specialOfferRepository.save(offer);
   }
 
-  async getSpecialOffers(storeProductID?: string): Promise<SpecialOffer[]> {
+  async getSpecialOffers(
+    storeProductID?: string,
+    activeStoreID?: string,
+  ): Promise<SpecialOffer[]> {
     const query: SelectQueryBuilder<SpecialOffer> = this.specialOfferRepository
       .createQueryBuilder('offer')
       .leftJoinAndSelect('offer.storeProduct', 'storeProduct')
@@ -85,6 +97,9 @@ export class OfferService {
       query.andWhere('storeProduct.storeProductID = :storeProductID', {
         storeProductID,
       });
+    }
+    if (activeStoreID) {
+      query.andWhere('store.storeID = :activeStoreID', { activeStoreID });
     }
 
     return query.getMany();
@@ -169,6 +184,27 @@ export class OfferService {
       throw new BadRequestException(
         'La fecha de termino no puede ser anterior al inicio',
       );
+    }
+  }
+
+  private async assertStoreProductBelongsToStore(
+    storeProductID: string,
+    activeStoreID?: string,
+  ): Promise<void> {
+    if (!activeStoreID) return;
+
+    const exists = await this.specialOfferRepository.manager
+      .getRepository(StoreProduct)
+      .createQueryBuilder('storeProduct')
+      .leftJoin('storeProduct.store', 'store')
+      .where('storeProduct.storeProductID = :storeProductID', {
+        storeProductID,
+      })
+      .andWhere('store.storeID = :activeStoreID', { activeStoreID })
+      .getExists();
+
+    if (!exists) {
+      throw new NotFoundException('Producto de tienda no encontrado');
     }
   }
 

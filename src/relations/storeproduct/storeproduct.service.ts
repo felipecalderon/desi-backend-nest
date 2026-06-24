@@ -225,9 +225,13 @@ export class StoreProductService {
   async update(
     id: string,
     updateStoreProductDto: UpdateStoreProductDto,
+    storeID?: string,
   ): Promise<StoreProduct> {
     const storeProduct = await this.storeStockRepository.findOne({
-      where: { storeProductID: id },
+      where: {
+        storeProductID: id,
+        ...(storeID ? { store: { storeID } } : {}),
+      },
     });
 
     if (!storeProduct) {

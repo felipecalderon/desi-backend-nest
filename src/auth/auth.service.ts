@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import * as bcrypt from 'bcrypt';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,7 @@ export class AuthService {
         id: user.userID,
         email: user.email,
         role: user.role,
+        stores: this.mapStoreMemberships(user),
       };
 
       return {
@@ -39,6 +41,7 @@ export class AuthService {
           name: user.name,
           role: user.role,
           userImg: user.userImg,
+          stores: this.mapStoreMemberships(user),
         },
         accessToken: await this.jwtService.signAsync(payload),
       };
@@ -55,6 +58,7 @@ export class AuthService {
       id: user.userID,
       email: user.email,
       role: user.role,
+      stores: this.mapStoreMemberships(user),
     };
 
     return {
@@ -64,8 +68,19 @@ export class AuthService {
         name: user.name,
         role: user.role,
         userImg: user.userImg,
+        stores: this.mapStoreMemberships(user),
       },
       accessToken: await this.jwtService.signAsync(payload),
     };
+  }
+
+  private mapStoreMemberships(user: User) {
+    return (
+      user.userStores?.map((userStore) => ({
+        storeID: userStore.store.storeID,
+        name: userStore.store.name,
+        role: userStore.role,
+      })) ?? []
+    );
   }
 }

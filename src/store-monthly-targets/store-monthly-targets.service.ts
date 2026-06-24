@@ -79,8 +79,9 @@ export class StoreMonthlyTargetsService {
     return this.targetRepository.save(target);
   }
 
-  findAll(): Promise<StoreMonthlyTarget[]> {
+  findAll(storeID: string): Promise<StoreMonthlyTarget[]> {
     return this.targetRepository.find({
+      where: { store: { storeID } },
       relations: ['store'],
       order: {
         period: 'DESC',
@@ -89,9 +90,9 @@ export class StoreMonthlyTargetsService {
     });
   }
 
-  async findOne(id: string): Promise<StoreMonthlyTarget> {
+  async findOne(id: string, storeID?: string): Promise<StoreMonthlyTarget> {
     const target = await this.targetRepository.findOne({
-      where: { id },
+      where: { id, ...(storeID ? { store: { storeID } } : {}) },
       relations: ['store'],
     });
 
@@ -185,8 +186,9 @@ export class StoreMonthlyTargetsService {
   async update(
     id: string,
     updateStoreMonthlyTargetDto: UpdateStoreMonthlyTargetDto,
+    storeID?: string,
   ): Promise<StoreMonthlyTarget> {
-    const target = await this.findOne(id);
+    const target = await this.findOne(id, storeID);
     this.assertEditable(this.normalizePeriod(target.period));
 
     if (updateStoreMonthlyTargetDto.targetAmount !== undefined) {
@@ -196,8 +198,8 @@ export class StoreMonthlyTargetsService {
     return this.targetRepository.save(target);
   }
 
-  async remove(id: string): Promise<void> {
-    const target = await this.findOne(id);
+  async remove(id: string, storeID?: string): Promise<void> {
+    const target = await this.findOne(id, storeID);
     this.assertEditable(this.normalizePeriod(target.period));
     await this.targetRepository.remove(target);
   }

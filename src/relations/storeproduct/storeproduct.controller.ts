@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -20,6 +21,9 @@ import {
 } from '@nestjs/swagger';
 import { StoreProduct } from './entities/storeproduct.entity';
 import { Product } from '../../products/entities/product.entity';
+import { GetUser } from '../../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../../common/tenant/store-scope.util';
 
 @ApiTags('Productos de la Tienda')
 @Controller('storeproduct')
@@ -41,7 +45,15 @@ export class StoreProductController {
     description: 'Stock insuficiente o datos inválidos.',
   })
   @ApiResponse({ status: 404, description: 'Tienda o Producto no encontrado.' })
-  transferStock(@Body() transferStockDto: TransferStockDto) {
+  transferStock(
+    @Body() transferStockDto: TransferStockDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    transferStockDto.targetStoreID = getRequiredActiveStoreID(
+      user,
+      activeStoreID,
+    );
     return this.storeProductService.transferStock(transferStockDto);
   }
 
@@ -61,8 +73,13 @@ export class StoreProductController {
     description: 'Inventario de la tienda.',
     type: [Product],
   })
-  getStoreInventory(@Query('storeID', ParseUUIDPipe) storeID: string) {
-    return this.storeProductService.getStoreInventory(storeID);
+  getStoreInventory(
+    @Query('storeID', ParseUUIDPipe) storeID: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeProductService.getStoreInventory(scopedStoreID);
   }
 
   @Patch(':id')
@@ -88,7 +105,10 @@ export class StoreProductController {
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateStoreProductDto: UpdateStoreProductDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.storeProductService.update(id, updateStoreProductDto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.storeProductService.update(id, updateStoreProductDto, storeID);
   }
 }

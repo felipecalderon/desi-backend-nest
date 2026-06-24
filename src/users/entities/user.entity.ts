@@ -1,4 +1,5 @@
 import { UserStore } from '../../relations/userstores/entities/userstore.entity';
+import { UserRole } from './user-role.enum';
 import {
   Entity,
   Column,
@@ -8,12 +9,7 @@ import {
   OneToMany,
 } from 'typeorm';
 
-export enum UserRole {
-  ADMIN = 'admin',
-  STORE_MANAGER = 'store_manager',
-  CONSIGNADO = 'consignado',
-  TERCERO = 'tercero',
-}
+export { UserRole };
 
 @Entity({ name: 'Users', schema: 'public' })
 export class User {

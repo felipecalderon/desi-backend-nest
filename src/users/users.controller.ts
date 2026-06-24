@@ -8,6 +8,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Headers,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,14 +17,20 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Store } from '../stores/entities/store.entity';
 import { CustomMessage } from '../common/decorators/response-message';
 import { User } from './entities/user.entity';
-import { Public } from '../auth/decorators/public.decorator';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import {
+  getOptionalScopedStoreID,
+  getRequiredActiveStoreID,
+  getUserScopedStoreID,
+} from '../common/tenant/store-scope.util';
+import { UserRole } from './entities/user.entity';
 
 @ApiTags('Usuarios')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Public()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Crear un nuevo usuario' })
@@ -34,11 +41,18 @@ export class UsersController {
   })
   @ApiResponse({ status: 400, description: 'Solicitud incorrecta.' })
   @ApiResponse({ status: 500, description: 'Error interno del servidor.' })
-  create(@Body() createUserDto: CreateUserDto) {
+  create(
+    @Body() createUserDto: CreateUserDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    if (createUserDto.role !== UserRole.SUPER_ADMIN) {
+      createUserDto.storeID = getRequiredActiveStoreID(user, activeStoreID);
+    }
+
     return this.usersService.create(createUserDto);
   }
 
-  @Public()
   @Get()
   @CustomMessage('Lista de usuarios obtenida exitosamente')
   @ApiOperation({ summary: 'Obtener todos los usuarios' })
@@ -47,8 +61,12 @@ export class UsersController {
     description: 'Lista de todos los usuarios.',
     type: [User],
   })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getOptionalScopedStoreID(user, activeStoreID);
+    return this.usersService.findAll(scopedStoreID);
   }
 
   @Get(':id/stores')
@@ -64,8 +82,13 @@ export class UsersController {
     type: [Store],
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  findStoresByUserId(@Param('id') id: string) {
-    return this.usersService.findStoresByUserId(id);
+  findStoresByUserId(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.usersService.findStoresByUserId(id, scopedStoreID);
   }
 
   @Get(':email')
@@ -78,8 +101,13 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'Usuario encontrado.', type: User })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  findOne(@Param('email') email: string) {
-    return this.usersService.findOneByEmail(email);
+  findOne(
+    @Param('email') email: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.usersService.findOneByEmail(email, scopedStoreID);
   }
 
   @Patch(':id')
@@ -95,8 +123,14 @@ export class UsersController {
     type: User,
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.usersService.update(id, updateUserDto, scopedStoreID);
   }
 
   @Delete(':id')
@@ -112,7 +146,12 @@ export class UsersController {
     description: 'El usuario ha sido eliminado exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.usersService.remove(id, scopedStoreID);
   }
 }

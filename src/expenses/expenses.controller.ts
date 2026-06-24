@@ -9,6 +9,7 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  Headers,
 } from '@nestjs/common';
 import { ExpensesService } from './expenses.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
@@ -18,6 +19,9 @@ import { Expense } from './entities/expense.entity';
 import { CustomMessage } from '../common/decorators/response-message';
 import { ExpenseSummaryDto } from './dto/expense-summary.dto';
 import { ExpenseSummaryQueryDto } from './dto/expense-summary-query.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Gestión de Gastos')
 @Controller('expenses')
@@ -37,7 +41,12 @@ export class ExpensesController {
     type: Expense,
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
-  create(@Body() createExpenseDto: CreateExpenseDto) {
+  create(
+    @Body() createExpenseDto: CreateExpenseDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    createExpenseDto.storeID = getRequiredActiveStoreID(user, activeStoreID);
     return this.expensesService.create(createExpenseDto);
   }
 
@@ -53,8 +62,12 @@ export class ExpensesController {
     description: 'Lista de todos los gastos recuperada con éxito.',
     type: [Expense],
   })
-  findAll() {
-    return this.expensesService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.expensesService.findAll(storeID);
   }
 
   @Get('summary')
@@ -70,7 +83,10 @@ export class ExpensesController {
   })
   async summary(
     @Query() query: ExpenseSummaryQueryDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ): Promise<ExpenseSummaryDto> {
+    query.storeId = getRequiredActiveStoreID(user, activeStoreID);
     const summary: ExpenseSummaryDto =
       await this.expensesService.getSummary(query);
     return summary;
@@ -97,8 +113,13 @@ export class ExpensesController {
     status: 404,
     description: 'Gasto no encontrado en el sistema.',
   })
-  findOne(@Param('id') id: string) {
-    return this.expensesService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.expensesService.findOne(id, storeID);
   }
 
   @Patch(':id')
@@ -121,8 +142,14 @@ export class ExpensesController {
     status: 404,
     description: 'Gasto no encontrado para actualizar.',
   })
-  update(@Param('id') id: string, @Body() updateExpenseDto: UpdateExpenseDto) {
-    return this.expensesService.update(id, updateExpenseDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateExpenseDto: UpdateExpenseDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.expensesService.update(id, updateExpenseDto, storeID);
   }
 
   @Delete(':id')
@@ -145,7 +172,12 @@ export class ExpensesController {
     status: 404,
     description: 'Gasto no encontrado para eliminar.',
   })
-  remove(@Param('id') id: string) {
-    return this.expensesService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.expensesService.remove(id, storeID);
   }
 }

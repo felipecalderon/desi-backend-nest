@@ -1,8 +1,22 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  Headers,
+} from '@nestjs/common';
 import { UserstoresService } from './userstores.service';
 import { CreateUserstoreDto } from './dto/create-userstore.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { UserStore } from './entities/userstore.entity';
+import { GetUser } from '../../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
+import {
+  getOptionalScopedStoreID,
+  getRequiredActiveStoreID,
+} from '../../common/tenant/store-scope.util';
 
 @ApiTags('Usuarios de las Tiendas')
 @Controller('userstores')
@@ -21,8 +35,14 @@ export class UserstoresController {
     type: UserStore,
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos.' })
-  create(@Body() createUserstoreDto: CreateUserstoreDto) {
-    return this.userstoresService.create(createUserstoreDto);
+  create(
+    @Body() createUserstoreDto: CreateUserstoreDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    createUserstoreDto.storeID = storeID;
+    return this.userstoresService.create(createUserstoreDto, storeID);
   }
 
   @Get()
@@ -36,8 +56,12 @@ export class UserstoresController {
     description: 'Lista de relaciones usuario-tienda.',
     type: [UserStore],
   })
-  findAll() {
-    return this.userstoresService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getOptionalScopedStoreID(user, activeStoreID);
+    return this.userstoresService.findAll(scopedStoreID);
   }
 
   @Get(':id')
@@ -56,8 +80,13 @@ export class UserstoresController {
     type: [UserStore],
   })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado.' })
-  findOne(@Param('id') id: string) {
-    return this.userstoresService.findStoresByUserId(id);
+  findOne(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getOptionalScopedStoreID(user, activeStoreID);
+    return this.userstoresService.findStoresByUserId(id, scopedStoreID);
   }
 
   @Delete(':id')
@@ -76,7 +105,12 @@ export class UserstoresController {
     description: 'Asignación eliminada exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Asignación no encontrada.' })
-  remove(@Param('id') id: string) {
-    return this.userstoresService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getOptionalScopedStoreID(user, activeStoreID);
+    return this.userstoresService.remove(id, scopedStoreID);
   }
 }

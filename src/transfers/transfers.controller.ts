@@ -1,4 +1,12 @@
-import { Controller, Post, Body, Param, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Param,
+  Get,
+  Query,
+  Headers,
+} from '@nestjs/common';
 import { TransfersService } from './transfers.service';
 import { CreateStoreTransferDto } from './dto/create-store-transfer.dto';
 import { AddTransferItemDto } from './dto/add-transfer-item.dto';
@@ -10,6 +18,9 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Transferencias entre Tiendas')
 @Controller('transfers')
@@ -35,8 +46,13 @@ export class TransfersController {
     status: 200,
     description: 'Listado de transferencias paginado.',
   })
-  findAll(@Query() filters: ListTransfersFilterDto) {
-    return this.transfersService.findAll(filters);
+  findAll(
+    @Query() filters: ListTransfersFilterDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.transfersService.findAll(filters, storeID);
   }
 
   @Post()
@@ -50,7 +66,12 @@ export class TransfersController {
     description: 'La transferencia ha sido creada en estado borrador.',
   })
   @ApiResponse({ status: 400, description: 'Datos de entrada inválidos.' })
-  createTransfer(@Body() createDto: CreateStoreTransferDto) {
+  createTransfer(
+    @Body() createDto: CreateStoreTransferDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    createDto.originStoreID = getRequiredActiveStoreID(user, activeStoreID);
     return this.transfersService.createTransfer(createDto);
   }
 
@@ -69,8 +90,11 @@ export class TransfersController {
   addItem(
     @Param('id') transferID: string,
     @Body() addItemDto: AddTransferItemDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.transfersService.addItem(transferID, addItemDto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.transfersService.addItem(transferID, addItemDto, storeID);
   }
 
   @Post(':id/complete')
@@ -94,8 +118,13 @@ export class TransfersController {
       'Error al completar la transferencia (ej. stock insuficiente).',
   })
   @ApiResponse({ status: 404, description: 'Transferencia no encontrada.' })
-  completeTransfer(@Param('id') transferID: string) {
-    return this.transfersService.completeTransfer(transferID);
+  completeTransfer(
+    @Param('id') transferID: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.transfersService.completeTransfer(transferID, storeID);
   }
 
   @Get(':id')
@@ -106,7 +135,12 @@ export class TransfersController {
     description: 'Detalles de la transferencia recuperados exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Transferencia no encontrada.' })
-  getTransfer(@Param('id') transferID: string) {
-    return this.transfersService.getTransfer(transferID);
+  getTransfer(
+    @Param('id') transferID: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.transfersService.getTransfer(transferID, storeID);
   }
 }

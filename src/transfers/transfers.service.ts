@@ -46,11 +46,14 @@ export class TransfersService {
   async addItem(
     transferID: string,
     addItemDto: AddTransferItemDto,
+    activeStoreID?: string,
   ): Promise<StoreTransferItem> {
     const transfer = await this.transfersRepository.findOne({
       where: { transferID },
+      relations: ['originStore', 'destinationStore'],
     });
     if (!transfer) throw new NotFoundException('Transfer not found');
+    this.assertTransferBelongsToStore(transfer, activeStoreID);
     if (transfer.status !== TransferStatus.PENDING) {
       throw new BadRequestException(
         'Cannot add items to a non-pending transfer',
@@ -65,7 +68,10 @@ export class TransfersService {
     return this.transferItemsRepository.save(item);
   }
 
-  async completeTransfer(transferID: string): Promise<StoreTransfer> {
+  async completeTransfer(
+    transferID: string,
+    activeStoreID?: string,
+  ): Promise<StoreTransfer> {
     return this.dataSource.transaction(async (manager) => {
       const transfer = await manager.findOne(StoreTransfer, {
         where: { transferID },
@@ -78,6 +84,7 @@ export class TransfersService {
       });
 
       if (!transfer) throw new NotFoundException('Transfer not found');
+      this.assertTransferBelongsToStore(transfer, activeStoreID);
       if (transfer.status !== TransferStatus.PENDING) {
         throw new BadRequestException('Transfer is not pending');
       }
@@ -110,8 +117,8 @@ export class TransfersService {
     });
   }
 
-  async getTransfer(transferID: string) {
-    return this.transfersRepository.findOne({
+  async getTransfer(transferID: string, activeStoreID?: string) {
+    const transfer = await this.transfersRepository.findOne({
       where: { transferID },
       relations: [
         'items',
@@ -120,9 +127,12 @@ export class TransfersService {
         'destinationStore',
       ],
     });
+    if (!transfer) throw new NotFoundException('Transfer not found');
+    this.assertTransferBelongsToStore(transfer, activeStoreID);
+    return transfer;
   }
 
-  async findAll(filters: ListTransfersFilterDto) {
+  async findAll(filters: ListTransfersFilterDto, activeStoreID?: string) {
     const {
       originStoreID,
       destinationStoreID,
@@ -147,6 +157,12 @@ export class TransfersService {
         destinationStoreID,
       });
     }
+    if (activeStoreID) {
+      query.andWhere(
+        '(originStore.storeID = :activeStoreID OR destinationStore.storeID = :activeStoreID)',
+        { activeStoreID },
+      );
+    }
     if (status) {
       query.andWhere('transfer.status = :status', { status });
     }
@@ -162,5 +178,20 @@ export class TransfersService {
       page,
       lastPage: Math.ceil(total / limit),
     };
+  }
+
+  private assertTransferBelongsToStore(
+    transfer: StoreTransfer,
+    activeStoreID?: string,
+  ): void {
+    if (!activeStoreID) return;
+
+    const belongs =
+      transfer.originStore?.storeID === activeStoreID ||
+      transfer.destinationStore?.storeID === activeStoreID;
+
+    if (!belongs) {
+      throw new NotFoundException('Transfer not found');
+    }
   }
 }

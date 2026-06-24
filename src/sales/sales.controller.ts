@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -12,6 +13,9 @@ import { CreateSaleDto } from './dto/create-sale.dto';
 import { UpdateSaleStatusDto } from './dto/update-sale-status.dto';
 import { ApiOperation, ApiResponse, ApiTags, ApiParam } from '@nestjs/swagger';
 import { Sale } from './entities/sale.entity';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @ApiTags('Ventas')
 @Controller('sales')
@@ -34,7 +38,12 @@ export class SalesController {
     description: 'Stock insuficiente o datos inválidos.',
   })
   @ApiResponse({ status: 404, description: 'Tienda o Producto no encontrado.' })
-  create(@Body() createSaleDto: CreateSaleDto) {
+  create(
+    @Body() createSaleDto: CreateSaleDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    createSaleDto.storeID = getRequiredActiveStoreID(user, activeStoreID);
     return this.salesService.create(createSaleDto);
   }
 
@@ -49,8 +58,12 @@ export class SalesController {
     description: 'Lista de ventas.',
     type: [Sale],
   })
-  findAll() {
-    return this.salesService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.salesService.findAll(storeID);
   }
 
   @Get(':id')
@@ -70,8 +83,13 @@ export class SalesController {
     type: Sale,
   })
   @ApiResponse({ status: 404, description: 'Venta no encontrada.' })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.salesService.findOne(id);
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.salesService.findOne(id, storeID);
   }
 
   @Patch(':id/status')
@@ -93,7 +111,10 @@ export class SalesController {
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateSaleStatusDto: UpdateSaleStatusDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
   ) {
-    return this.salesService.updateStatus(id, updateSaleStatusDto);
+    const storeID = getRequiredActiveStoreID(user, activeStoreID);
+    return this.salesService.updateStatus(id, updateSaleStatusDto, storeID);
   }
 }

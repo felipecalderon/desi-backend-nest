@@ -22,7 +22,10 @@ export class ProductsService {
     @Optional() private readonly pricingService?: PricingService,
   ) {}
 
-  async create(createProductDto: CreateProductDto): Promise<Product> {
+  async create(
+    createProductDto: CreateProductDto,
+    storeID: string,
+  ): Promise<Product> {
     return this.entityManager.transaction(
       async (transactionalEntityManager) => {
         const { variations, ...productData } = createProductDto;
@@ -30,10 +33,13 @@ export class ProductsService {
         const product = transactionalEntityManager.create(Product, productData);
         const savedProduct = await transactionalEntityManager.save(product);
 
-        // Buscar tienda central para asociar stock inicial
-        const centralStore = await transactionalEntityManager.findOne(Store, {
-          where: { isCentralStore: true },
+        const targetStore = await transactionalEntityManager.findOne(Store, {
+          where: { storeID },
         });
+
+        if (!targetStore) {
+          throw new NotFoundException(`Tienda con ID ${storeID} no encontrada`);
+        }
 
         for (const variationDto of variations) {
           const variation = transactionalEntityManager.create(
@@ -46,16 +52,14 @@ export class ProductsService {
           const savedVariation =
             await transactionalEntityManager.save(variation);
 
-          if (centralStore) {
-            const sp = transactionalEntityManager.create(StoreProduct, {
-              store: { storeID: centralStore.storeID },
-              variation: { variationID: savedVariation.variationID },
-              stock: variationDto.stock,
-              priceCost: variationDto.priceCost,
-              priceList: variationDto.priceList,
-            });
-            await transactionalEntityManager.save(sp);
-          }
+          const sp = transactionalEntityManager.create(StoreProduct, {
+            store: { storeID: targetStore.storeID },
+            variation: { variationID: savedVariation.variationID },
+            stock: variationDto.stock,
+            priceCost: variationDto.priceCost,
+            priceList: variationDto.priceList,
+          });
+          await transactionalEntityManager.save(sp);
         }
 
         return savedProduct;
@@ -63,14 +67,22 @@ export class ProductsService {
     );
   }
 
-  async findAll(paginationDto: PaginationDto): Promise<Product[]> {
+  async findAll(
+    paginationDto: PaginationDto,
+    storeID: string,
+  ): Promise<Product[]> {
     const { limit = 10, offset = 0 } = paginationDto;
 
     const products = await this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.category', 'category')
       .leftJoinAndSelect('product.variations', 'variations')
-      .leftJoinAndSelect('variations.storeProducts', 'storeProducts')
+      .leftJoinAndSelect(
+        'variations.storeProducts',
+        'storeProducts',
+        'storeProducts.storeID = :storeID',
+        { storeID },
+      )
       .leftJoinAndSelect('storeProducts.store', 'store')
       .leftJoinAndSelect(
         'storeProducts.specialOffers',
@@ -152,16 +164,21 @@ export class ProductsService {
     return products;
   }
 
-  async findOne(id: string): Promise<Product> {
-    const product = await this.productRepository.findOne({
-      where: { productID: id },
-      relations: [
-        'variations',
+  async findOne(id: string, storeID?: string): Promise<Product> {
+    const qb = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.variations', 'variations')
+      .leftJoinAndSelect(
         'variations.storeProducts',
-        'variations.storeProducts.store',
-        'category',
-      ],
-    });
+        'storeProducts',
+        storeID ? 'storeProducts.storeID = :storeID' : undefined,
+        storeID ? { storeID } : undefined,
+      )
+      .leftJoinAndSelect('storeProducts.store', 'store')
+      .where('product.productID = :id', { id });
+
+    const product = await qb.getOne();
 
     if (!product) {
       throw new NotFoundException(`Producto con ID ${id} no encontrado`);
@@ -173,6 +190,7 @@ export class ProductsService {
   async update(
     id: string,
     updateProductDto: UpdateProductDto,
+    storeID?: string,
   ): Promise<Product> {
     const { variations, ...productData } = updateProductDto;
 
@@ -191,9 +209,13 @@ export class ProductsService {
         const savedProduct = await transactionalEntityManager.save(product);
 
         if (variations) {
-          const centralStore = await transactionalEntityManager.findOne(Store, {
-            where: { isCentralStore: true },
-          });
+          const targetStore = storeID
+            ? await transactionalEntityManager.findOne(Store, {
+                where: { storeID },
+              })
+            : await transactionalEntityManager.findOne(Store, {
+                where: { isCentralStore: true },
+              });
 
           const existingVariationsMap = new Map(
             product.variations.map((v) => [v.sku, v]),
@@ -212,12 +234,12 @@ export class ProductsService {
 
               existingVariationsMap.delete(vDto.sku);
 
-              if (centralStore) {
+              if (targetStore) {
                 let sp = await transactionalEntityManager.findOne(
                   StoreProduct,
                   {
                     where: {
-                      store: { storeID: centralStore.storeID },
+                      store: { storeID: targetStore.storeID },
                       variation: { variationID: variation.variationID },
                     },
                   },
@@ -230,7 +252,7 @@ export class ProductsService {
                   await transactionalEntityManager.save(sp);
                 } else {
                   sp = transactionalEntityManager.create(StoreProduct, {
-                    store: { storeID: centralStore.storeID },
+                    store: { storeID: targetStore.storeID },
                     variation: { variationID: variation.variationID },
                     stock: vDto.stock,
                     priceCost: vDto.priceCost,
@@ -247,9 +269,9 @@ export class ProductsService {
               const savedVariation =
                 await transactionalEntityManager.save(variation);
 
-              if (centralStore) {
+              if (targetStore) {
                 const sp = transactionalEntityManager.create(StoreProduct, {
-                  store: { storeID: centralStore.storeID },
+                  store: { storeID: targetStore.storeID },
                   variation: { variationID: savedVariation.variationID },
                   stock: vDto.stock,
                   priceCost: vDto.priceCost,
@@ -265,13 +287,13 @@ export class ProductsService {
           }
         }
 
-        return this.findOne(id);
+        return this.findOne(id, storeID);
       },
     );
   }
 
-  async remove(id: string): Promise<void> {
-    const product = await this.findOne(id);
+  async remove(id: string, storeID?: string): Promise<void> {
+    const product = await this.findOne(id, storeID);
     await this.productRepository.remove(product);
   }
 }

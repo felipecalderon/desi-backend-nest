@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Headers,
   Post,
   Body,
   Patch,
@@ -14,6 +15,12 @@ import { User } from '../users/entities/user.entity';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { Store } from './entities/store.entity';
 import { CustomMessage } from '../common/decorators/response-message';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import {
+  getOptionalScopedStoreID,
+  getUserScopedStoreID,
+} from '../common/tenant/store-scope.util';
 
 @ApiTags('Tiendas')
 @Controller('stores')
@@ -51,8 +58,12 @@ export class StoresController {
     description: 'Lista de tiendas.',
     type: [Store],
   })
-  findAll() {
-    return this.storesService.findAll();
+  findAll(
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getOptionalScopedStoreID(user, activeStoreID);
+    return this.storesService.findAll(scopedStoreID);
   }
 
   @Get(':id/users')
@@ -68,8 +79,13 @@ export class StoresController {
     type: [User],
   })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  findUsersByStoreId(@Param('id') id: string) {
-    return this.storesService.findUsersByStoreId(id);
+  findUsersByStoreId(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.storesService.findUsersByStoreId(id, scopedStoreID);
   }
 
   @Get(':id')
@@ -88,8 +104,13 @@ export class StoresController {
     type: Store,
   })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  findOne(@Param('id') id: string) {
-    return this.storesService.findOne(id);
+  findOne(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.storesService.findOne(id, scopedStoreID);
   }
 
   @Patch(':id')
@@ -109,8 +130,14 @@ export class StoresController {
     type: Store,
   })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  update(@Param('id') id: string, @Body() updateStoreDto: UpdateStoreDto) {
-    return this.storesService.update(id, updateStoreDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateStoreDto: UpdateStoreDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.storesService.update(id, updateStoreDto, scopedStoreID);
   }
 
   @Delete(':id')
@@ -128,7 +155,12 @@ export class StoresController {
     description: 'Tienda eliminada exitosamente.',
   })
   @ApiResponse({ status: 404, description: 'Tienda no encontrada.' })
-  remove(@Param('id') id: string) {
-    return this.storesService.remove(id);
+  remove(
+    @Param('id') id: string,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    const scopedStoreID = getUserScopedStoreID(user, activeStoreID);
+    return this.storesService.remove(id, scopedStoreID);
   }
 }

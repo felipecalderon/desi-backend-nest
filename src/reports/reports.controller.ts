@@ -1,9 +1,12 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Headers, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
 import { IncomeStatementQueryDto } from './dto/income-statement-query.dto';
 import { IncomeStatementDto } from './dto/income-statement.dto';
 import { ReportsSaleFilterDto } from './dto/report-salesFilter.dto';
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { getRequiredActiveStoreID } from '../common/tenant/store-scope.util';
 
 @Controller('reports')
 @ApiTags('Reportes')
@@ -32,7 +35,12 @@ export class ReportsController {
     description: 'Estado de resultados mensual.',
     type: IncomeStatementDto,
   })
-  async incomeStatement(@Query() query: IncomeStatementQueryDto) {
+  async incomeStatement(
+    @Query() query: IncomeStatementQueryDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    query.storeId = getRequiredActiveStoreID(user, activeStoreID);
     return this.reportsService.getIncomeStatement(query);
   }
 
@@ -72,7 +80,12 @@ export class ReportsController {
     description: 'Reporte de ventas',
     type: ReportsSaleFilterDto,
   })
-  async salesReport(@Query() query: ReportsSaleFilterDto) {
+  async salesReport(
+    @Query() query: ReportsSaleFilterDto,
+    @Headers('x-store-id') activeStoreID: string | undefined,
+    @GetUser() user: JwtPayload,
+  ) {
+    query.storeId = getRequiredActiveStoreID(user, activeStoreID);
     return this.reportsService.getSalesReport(query);
   }
 }
