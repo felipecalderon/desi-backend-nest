@@ -20,7 +20,7 @@ COPY . .
 RUN pnpm run build
 
 # Stage 2: Create the production image
-FROM node:20-alpine
+FROM node:24-alpine
 
 # Set the working directory
 WORKDIR /usr/src/app
