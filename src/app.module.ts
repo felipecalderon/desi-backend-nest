@@ -18,6 +18,7 @@ import { TransfersModule } from './transfers/transfers.module';
 import { SeedModule } from './seed/seed.module';
 import { StoreMonthlyTargetsModule } from './store-monthly-targets/store-monthly-targets.module';
 import { DteModule } from './dte/dte.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { DteModule } from './dte/dte.module';
     StoreMonthlyTargetsModule,
     DteModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_INTERCEPTOR,
